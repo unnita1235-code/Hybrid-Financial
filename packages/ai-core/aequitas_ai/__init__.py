@@ -1,0 +1,76 @@
+"""Aequitas FI AI core: prompts, agent nodes, LangGraph state."""
+
+from aequitas_ai.agents.temporal_agent import (
+    StubTemporalConfig,
+    TemporalAgentConfig,
+    TemporalAgentOutput,
+    TemporalAgentState,
+    build_temporal_agent,
+    filter_chunks_by_metadata_window,
+)
+from aequitas_ai.research_agent import (
+    ResearchAgentConfig,
+    ResearchAgentState,
+    ResearchOutputUI,
+    StubResearchConfig,
+    build_research_agent,
+    to_research_output_ui,
+)
+from aequitas_ai.rag_engine import (
+    HYBRID_SYNTHESIS_SYSTEM,
+    DocumentSourceItem,
+    HybridRagState,
+    HybridSynthesisNodeConfig,
+    HybridSynthesisResult,
+    HybridSources,
+    RAGPipelineConfig,
+    SupabaseRagConfig,
+    SupabaseRagRetriever,
+    SynthesisPiiGuard,
+    build_hybrid_sources,
+    make_hybrid_synthesis_node,
+    run_hybrid_synthesis,
+    run_rag_hybrid,
+)
+from aequitas_ai.sql_engine import (
+    DEFAULT_FINANCIAL_SCHEMA,
+    SqlEngineState,
+    SqlGraphConfig,
+    build_sql_engine_graph,
+    route_after_validation,
+)
+
+__all__ = [
+    "DEFAULT_FINANCIAL_SCHEMA",
+    "StubTemporalConfig",
+    "TemporalAgentConfig",
+    "TemporalAgentOutput",
+    "TemporalAgentState",
+    "build_temporal_agent",
+    "filter_chunks_by_metadata_window",
+    "ResearchAgentConfig",
+    "ResearchAgentState",
+    "ResearchOutputUI",
+    "StubResearchConfig",
+    "DocumentSourceItem",
+    "HYBRID_SYNTHESIS_SYSTEM",
+    "HybridRagState",
+    "HybridSynthesisNodeConfig",
+    "HybridSynthesisResult",
+    "HybridSources",
+    "RAGPipelineConfig",
+    "SupabaseRagConfig",
+    "SupabaseRagRetriever",
+    "SynthesisPiiGuard",
+    "SqlEngineState",
+    "SqlGraphConfig",
+    "build_hybrid_sources",
+    "build_research_agent",
+    "build_sql_engine_graph",
+    "make_hybrid_synthesis_node",
+    "route_after_validation",
+    "run_hybrid_synthesis",
+    "run_rag_hybrid",
+    "to_research_output_ui",
+]
+__version__ = "0.1.0"
