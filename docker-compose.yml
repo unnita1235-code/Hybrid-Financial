@@ -1,0 +1,25 @@
+# Local Postgres with pgvector — mirrors Supabase-style SQL + vector workloads.
+# Start: docker compose up -d
+# Connection (default): postgresql://aequitas:aequitas_dev@localhost:5432/aequitas
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: aequitas-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: aequitas
+      POSTGRES_PASSWORD: aequitas_dev
+      POSTGRES_DB: aequitas
+    volumes:
+      - aequitas_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aequitas -d aequitas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  aequitas_pgdata:

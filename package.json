@@ -1,0 +1,18 @@
+{
+  "name": "aequitas-fi",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "clean:web": "node -e \"const fs=require('fs'),p='apps/web/.next';if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true});console.log('clean:web: removed apps/web/.next (if it existed). If edge ENOENT persists, use npm run dev:web:webpack. On Windows, exclude that path from real-time scan/sync.')\"",
+    "dev:web": "npm run dev -w @aequitas/web",
+    "dev:web:webpack": "npm run dev:webpack -w @aequitas/web",
+    "build:web": "npm run build -w @aequitas/web",
+    "lint:web": "npm run lint -w @aequitas/web",
+    "format:web": "prettier --check \"apps/web/**/*.{ts,tsx,js,json,css,md}\"",
+    "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}

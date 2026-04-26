@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aequitas-ai"
+version = "0.1.0"
+description = "Prompt templates, agent nodes, and LangGraph wiring for Aequitas FI"
+requires-python = ">=3.11"
+dependencies = [
+  "asyncpg>=0.30.0",
+  "httpx>=0.28.0",
+  "langchain-core>=0.3.0",
+  "langgraph>=0.2.0",
+  "pydantic>=2.10.0",
+  "sqlalchemy[asyncio]>=2.0.36",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.8.0", "pytest>=8.3.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["aequitas_ai"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

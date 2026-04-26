@@ -1,0 +1,4 @@
+# Evaluation suite: install with: pip install -r testing_suite/requirements.txt
+deepeval>=2.0.0
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

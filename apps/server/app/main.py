@@ -1,4 +1,10 @@
+import asyncio
+import sys
 from contextlib import asynccontextmanager
+
+# Psycopg async requires a selector event loop on Windows (not the default Proactor).
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,8 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.debate import router as debate_router
 from api.ingest import router as ingest_router
 from app.config import settings
+from app.langgraph_lifespan import start_langgraph_checkpointer, stop_langgraph_checkpointer
 from app.routers import health
 from app.routers.audit import router as audit_router
+from app.routers.insight import router as insight_router
 from app.routers.reports import router as reports_router
 from app.routers.temporal import router as temporal_router
 from app.services.shadow_analyst import ShadowAnalystService
@@ -15,6 +23,7 @@ from app.services.shadow_analyst import ShadowAnalystService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.checkpoint_pool = await start_langgraph_checkpointer()
     if settings.shadow_analyst_enabled:
         sa = ShadowAnalystService.from_url()
         sa.start()
@@ -22,6 +31,10 @@ async def lifespan(app: FastAPI):
     else:
         app.state.shadow_analyst = None
     yield
+    await stop_langgraph_checkpointer(
+        getattr(app.state, "checkpoint_pool", None),
+    )
+    app.state.checkpoint_pool = None
     svc: ShadowAnalystService | None = getattr(
         app.state, "shadow_analyst", None
     )
@@ -60,6 +73,7 @@ app.include_router(ingest_router)
 app.include_router(debate_router)
 app.include_router(audit_router)
 app.include_router(reports_router)
+app.include_router(insight_router)
 app.include_router(temporal_router)
 
 

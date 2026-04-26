@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+__pycache__
+*.py[cod]
+*$py.class
+.Python
+.venv
+venv
+env
+ENV
+
+# Build / cache
+.next
+out
+build
+dist
+*.tsbuildinfo
+*.egg-info
+.eggs
+.turbo
+.cache
+.mypy_cache
+.ruff_cache
+.pytest_cache
+htmlcov
+.coverage
+coverage
+
+# Environment
+.env
+.env.*
+!.env.example
+!**/.env.example
+.aws
+
+# IDE / OS
+.cursor
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# DB / local
+*.db
+*.sqlite3
+
+# Alembic (keep versions; optional local override)
+# uncomment if you store secrets in alembic.ini

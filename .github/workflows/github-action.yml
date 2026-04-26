@@ -1,0 +1,72 @@
+# CI / CD: secret guard, Python tests (DeepEval optional), web build
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  no-committed-secrets:
+    name: No OpenAI / Anthropic key patterns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Scan tracked files for API key patterns
+        run: |
+          python testing_suite/verify_no_api_keys.py
+
+  python-test:
+    name: testing_suite (pytest)
+    needs: [no-committed-secrets]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r testing_suite/requirements.txt
+      - name: Run tests (set OPENAI for DeepEval if configured)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pytest
+      - name: Faithfulness script (demo)
+        run: |
+          python testing_suite/calculate_faithfulness.py --demo
+
+  web-build:
+    name: apps/web build
+    needs: [no-committed-secrets]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: .
+      - name: Next build
+        run: npm run build:web
+        working-directory: .

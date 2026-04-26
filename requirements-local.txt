@@ -1,0 +1,5 @@
+# Editable local packages (from repo root). Python 3.11+
+# pip install -r requirements-local.txt
+-e packages/database
+-e packages/ai-core
+-e apps/server
