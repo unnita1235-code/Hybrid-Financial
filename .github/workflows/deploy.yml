@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy (Cloudflare)
 
 on:
   workflow_dispatch:
@@ -11,15 +11,13 @@ jobs:
     steps:
       - name: Validate required deployment secrets
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           set -euo pipefail
-          required=(NETLIFY_AUTH_TOKEN NETLIFY_SITE_ID RENDER_API_KEY RENDER_SERVICE_ID FRONTEND_URL BACKEND_URL)
+          required=(CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID FRONTEND_URL BACKEND_URL)
           missing=0
           for key in "${required[@]}"; do
             if [ -z "${!key}" ]; then
@@ -46,15 +44,21 @@ jobs:
         run: npm ci
       - name: Frontend lint
         run: npm run lint:web
+      - name: Frontend typecheck
+        run: npm run typecheck:web
       - name: Frontend build
         run: npm run build:web
+      - name: Worker typecheck
+        run: npm run typecheck -w @aequitas/api-worker
+      - name: Worker tests
+        run: npm run test -w @aequitas/api-worker
       - name: Backend tests
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-local.txt
           pytest apps/server/tests -q --tb=line
 
-  deploy-frontend-netlify:
+  deploy-backend-worker:
     runs-on: ubuntu-latest
     needs: [pre-deploy-checks]
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
@@ -65,71 +69,34 @@ jobs:
           node-version: 20
       - name: Install deps
         run: npm ci
-      - name: Deploy frontend to Netlify (production)
+      - name: Deploy Cloudflare Worker API
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NEXT_PUBLIC_AEQUITAS_API_URL: ${{ secrets.BACKEND_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          UPSTREAM_API_BASE: ${{ secrets.UPSTREAM_API_BASE }}
+          APP_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
-          npx netlify-cli deploy \
-            --build \
-            --prod \
-            --site "$NETLIFY_SITE_ID" \
-            --message "GitHub Actions deploy ${GITHUB_SHA}"
+          npm run deploy -w @aequitas/api-worker -- --env ${{ github.ref_name == 'main' && 'production' || 'preview' }}
 
-  deploy-backend-render:
+  pages-deploy-mode:
     runs-on: ubuntu-latest
     needs: [pre-deploy-checks]
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
-      - name: Trigger Render deploy and wait for completion
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      - name: Emit Pages deploy summary
         run: |
-          set -euo pipefail
-          deploy_response=$(curl --fail-with-body -sS \
-            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"clearCache":"do_not_clear"}')
-          deploy_id=$(echo "$deploy_response" | jq -r '.id')
-          if [ -z "$deploy_id" ] || [ "$deploy_id" = "null" ]; then
-            echo "::error::Unable to parse Render deploy id"
-            echo "$deploy_response"
-            exit 1
-          fi
-          echo "Render deploy id: $deploy_id"
-          echo "render_deploy_id=$deploy_id" >> "$GITHUB_ENV"
-
-          max_attempts=60
-          attempt=1
-          while [ "$attempt" -le "$max_attempts" ]; do
-            status_response=$(curl --fail-with-body -sS \
-              -H "Authorization: Bearer ${RENDER_API_KEY}" \
-              "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys/${deploy_id}")
-            status=$(echo "$status_response" | jq -r '.status')
-            echo "Attempt $attempt/$max_attempts: status=$status"
-            if [ "$status" = "live" ]; then
-              exit 0
-            fi
-            if [ "$status" = "build_failed" ] || [ "$status" = "canceled" ] || [ "$status" = "update_failed" ]; then
-              echo "::error::Render deploy failed with status=$status"
-              echo "$status_response"
-              exit 1
-            fi
-            attempt=$((attempt + 1))
-            sleep 10
-          done
-          echo "::error::Render deploy timed out"
-          exit 1
+          {
+            echo "## Cloudflare Pages deploy mode"
+            echo "- Frontend deploys automatically via Cloudflare Pages Git integration."
+            echo "- Branch mapping: main -> production, develop -> preview."
+            echo "- This workflow validates quality gates before merge and deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   smoke-check:
     runs-on: ubuntu-latest
-    needs: [deploy-frontend-netlify, deploy-backend-render]
-    if: ${{ needs.deploy-frontend-netlify.result == 'success' && needs.deploy-backend-render.result == 'success' }}
+    needs: [deploy-backend-worker, pages-deploy-mode]
+    if: ${{ needs.deploy-backend-worker.result == 'success' && needs.pages-deploy-mode.result == 'success' }}
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
@@ -155,43 +122,23 @@ jobs:
 
   rollback-on-failure:
     runs-on: ubuntu-latest
-    needs: [deploy-frontend-netlify, deploy-backend-render, smoke-check]
-    if: ${{ always() && (needs.deploy-frontend-netlify.result == 'failure' || needs.deploy-backend-render.result == 'failure' || needs.smoke-check.result == 'failure') }}
+    needs: [deploy-backend-worker, pages-deploy-mode, smoke-check]
+    if: ${{ always() && (needs.deploy-backend-worker.result == 'failure' || needs.pages-deploy-mode.result == 'failure' || needs.smoke-check.result == 'failure') }}
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     env:
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-      NETLIFY_LAST_KNOWN_GOOD_DEPLOY_ID: ${{ secrets.NETLIFY_LAST_KNOWN_GOOD_DEPLOY_ID }}
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Attempt frontend rollback to last known good deploy
-        if: ${{ env.NETLIFY_LAST_KNOWN_GOOD_DEPLOY_ID != '' }}
+      - name: Attempt worker rollback to previous version
         run: |
-          set -euo pipefail
-          curl --fail-with-body -sS \
-            -X POST \
-            -H "Authorization: Bearer ${NETLIFY_AUTH_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/deploys/${NETLIFY_LAST_KNOWN_GOOD_DEPLOY_ID}/restore"
-          echo "Triggered Netlify rollback."
-
-      - name: Trigger backend redeploy as rollback fallback
-        if: ${{ env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != '' }}
-        run: |
-          set -euo pipefail
-          curl --fail-with-body -sS \
-            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"clearCache":"clear"}'
-          echo "Triggered Render rollback fallback redeploy."
+          echo "Use Cloudflare dashboard rollback for Worker if smoke checks fail."
+          echo "Pages rollback is managed in Cloudflare Pages deployment history."
 
       - name: Emit rollback summary
         run: |
           {
             echo "## Deployment failure handling"
-            echo "- Frontend rollback attempted when NETLIFY_LAST_KNOWN_GOOD_DEPLOY_ID is configured."
-            echo "- Backend rollback fallback triggered via fresh Render redeploy."
+            echo "- Frontend rollback: Cloudflare Pages deployment history."
+            echo "- Backend rollback: Cloudflare Workers versions/rollback."
             echo "- Check provider dashboards and deploy-smoke-artifacts for detailed diagnostics."
           } >> "$GITHUB_STEP_SUMMARY"

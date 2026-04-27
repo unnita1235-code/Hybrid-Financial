@@ -166,19 +166,20 @@ Wire your provider clients (OpenAI, Anthropic, or unified gateways) in the LangG
 
 - **[`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml)** — `push` / `pull_request` on `main`: Prettier + ESLint on `apps/web`, `pip install -r requirements-local.txt` + `testing_suite` deps, `pytest`, faithfulness demo script, optional DeepEval when **`OPENAI_API_KEY`** (and for full RAG tests, Supabase secrets as configured) is present.  
 - **[`.github/workflows/github-action.yml`](.github/workflows/github-action.yml)** — additional secret scan and builds on a broader set of branches; keep in sync with your branch strategy.
-- **[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)** — automated deployment pipeline for Vercel (frontend) and Railway (backend), including smoke checks.
+- **[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)** — automated deployment pipeline for Cloudflare Pages (frontend via Git integration) and Cloudflare Workers (backend), including smoke checks.
 
 **Secrets (AI eval job):** add **`OPENAI_API_KEY`**; optionally **`SUPABASE_URL`** and **`SUPABASE_SERVICE_KEY`** for tests that call vector RPCs.
 
-## Automated Vercel + Railway deploy
+## Automated Cloudflare deploy
 
-Deployment automation scripts are in `scripts/deploy/`:
+Deployment validation + smoke automation scripts are in `scripts/deploy/`:
 
-- `bootstrap-vercel.js` and `bootstrap-railway.js` for browser-assisted onboarding with CAPTCHA/OTP checkpoints.
-- `setup-vercel-project.js` and `setup-railway-service.js` for API-driven project/service provisioning and env setup.
-- `smoke-check.js` for post-deploy health verification.
+- `smoke-check.js` for post-deploy health verification against Pages + Worker endpoints.
+- Frontend deployment is automatic in Cloudflare Pages when `main`/`develop` is pushed.
+- Backend deployment is handled by GitHub Actions using Wrangler.
 
-Full runbook: [`docs/deployment-runbook.md`](docs/deployment-runbook.md).
+Full runbook: [`docs/deployment-runbook.md`](docs/deployment-runbook.md).  
+Cutover checklist: [`docs/cloudflare-cutover-checklist.md`](docs/cloudflare-cutover-checklist.md).
 
 ## Conventions
 

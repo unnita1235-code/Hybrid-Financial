@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aequitas-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-27",
+  "vars": {
+    "APP_ENV": "production",
+    "ENVIRONMENT": "production"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "env": {
+    "preview": {
+      "name": "aequitas-api-preview",
+      "vars": {
+        "APP_ENV": "staging",
+        "ENVIRONMENT": "staging"
+      }
+    }
+  }
+}

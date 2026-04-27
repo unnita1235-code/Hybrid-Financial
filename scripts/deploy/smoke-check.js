@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const { nowIso, optEnv, writeJson } = require("./common");
 
 async function checkHttp(url, expected = 200) {
-  const response = await fetch(url, { method: "GET" });
+  const response = await fetch(url, { method: "GET", redirect: "follow" });
   return {
     kind: "http",
     url,
@@ -42,6 +42,7 @@ async function run() {
     browserChecks.push(await checkRouteInBrowser(page, frontend, "/research"));
     browserChecks.push(await checkRouteInBrowser(page, frontend, "/alerts"));
     browserChecks.push(await checkRouteInBrowser(page, frontend, "/debate"));
+    browserChecks.push(await checkRouteInBrowser(page, frontend, "/portfolio"));
   } finally {
     await browser.close();
   }
