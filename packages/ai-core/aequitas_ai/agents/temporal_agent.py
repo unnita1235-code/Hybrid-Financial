@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -23,6 +24,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # State & structured output
@@ -50,6 +53,7 @@ class TemporalAgentState(TypedDict, total=False):
     narrative: str
     result: dict[str, Any]
     """JSON-serializable :class:`TemporalAgentOutput` as dict."""
+    rag_error: str | None
     error: str | None
 
 
@@ -67,6 +71,7 @@ class TemporalAgentOutput(BaseModel):
     label_new: str = ""
     narrative: str
     """Contextual explanation grounded in SQL + RAG."""
+    rag_error: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +177,10 @@ async def _split_sql(
     if schema_context.strip():
         block += f"\nSchema (reference only):\n{schema_context}\n"
     msg = [SystemMessage(content=SPLITTER_SYSTEM), HumanMessage(content=block)]
-    res = await llm.ainvoke(msg)
+    try:
+        res = await asyncio.wait_for(llm.ainvoke(msg), timeout=90.0)
+    except asyncio.TimeoutError as e:
+        raise RuntimeError("LLM call timed out after 90s") from e
     raw = getattr(res, "content", res)
     if isinstance(raw, list):
         raw = "".join(
@@ -223,15 +231,29 @@ def _first_scalar_from_rows(rows: list[dict[str, Any]]) -> float | None:
         "amount",
         "metric",
         "result",
+        "revenue",
+        "notional",
+        "pnl",
+        "profit",
+        "loss",
+        "return",
+        "price",
+        "nav",
+        "aum",
         "v",
     ):
         if key in row0:
             n = _coerce_number(row0.get(key))
             if n is not None:
                 return n
-    for _k, v in row0.items():
+    for k, v in row0.items():
         n = _coerce_number(v)
         if n is not None:
+            log.warning(
+                "_first_scalar_from_rows: no priority key found in row %s, using first numeric column '%s'",
+                list(row0.keys()),
+                k,
+            )
             return n
     return None
 
@@ -277,9 +299,11 @@ async def _write_narrative(
         f"SQL rows (new period):\n{json.dumps(rows_b, default=str)[:4000]}\n\n"
         f"RAG excerpts (time-window–filtered):\n{ctx_rag}\n"
     )
-    res = await llm.ainvoke(
-        [SystemMessage(content=NARRATIVE_SYSTEM), HumanMessage(content=human)]
-    )
+    msg = [SystemMessage(content=NARRATIVE_SYSTEM), HumanMessage(content=human)]
+    try:
+        res = await asyncio.wait_for(llm.ainvoke(msg), timeout=90.0)
+    except asyncio.TimeoutError as e:
+        raise RuntimeError("LLM call timed out after 90s") from e
     raw = getattr(res, "content", res)
     if isinstance(raw, list):
         raw = "".join(
@@ -381,7 +405,7 @@ def build_temporal_agent(
 
     async def targeted_rag(s: TemporalAgentState) -> dict[str, Any]:
         if not s.get("sql_baseline") or not s.get("sql_new"):
-            return {"retrieved_chunks": []}
+            return {"retrieved_chunks": [], "rag_error": None}
         uq = s.get("user_query", "")
         q = (
             f"{uq}\n"
@@ -393,8 +417,7 @@ def build_temporal_agent(
         except Exception as e:  # noqa: BLE001
             return {
                 "retrieved_chunks": [],
-                "error": (s.get("error") or "")
-                + (f"; RAG embed failed: {e}" if s.get("error") else f"RAG embed failed: {e}"),
+                "rag_error": str(e),
             }
         t0 = s.get("narrative_window_start") or ""
         t1 = s.get("narrative_window_end") or ""
@@ -407,12 +430,24 @@ def build_temporal_agent(
             )
         except TypeError:
             # Backward compatible: retriever may not accept keyword args
-            chunks = await config.retrieve(emb)
+            try:
+                chunks = await config.retrieve(emb)
+            except Exception as e:  # noqa: BLE001
+                return {
+                    "retrieved_chunks": [],
+                    "rag_error": str(e),
+                }
+        except Exception as e:  # noqa: BLE001
+            return {
+                "retrieved_chunks": [],
+                "rag_error": str(e),
+            }
         if (t0 or t1) and chunks:
             chunks = _filter_chunks_by_metadata_window(chunks, t0, t1)
         return {
             "query_embedding": emb,
             "retrieved_chunks": list(chunks or []),
+            "rag_error": None,
         }
 
     async def assemble_node(s: TemporalAgentState) -> dict[str, Any]:
@@ -428,6 +463,7 @@ def build_temporal_agent(
                 label_baseline=s.get("label_baseline", ""),
                 label_new=s.get("label_new", ""),
                 narrative=msg,
+                rag_error=s.get("rag_error"),
             )
             d = out.model_dump()
             if err:
@@ -442,6 +478,9 @@ def build_temporal_agent(
             ntext = f"Narrative generation failed: {e}"
         if err:
             ntext = f"{ntext}\n\nNote: {err}"
+        rag_error = s.get("rag_error")
+        if rag_error:
+            ntext = f"{ntext}\n\n⚠ RAG context unavailable: {rag_error}"
 
         out = TemporalAgentOutput(
             baseline=s.get("baseline_value"),
@@ -451,6 +490,7 @@ def build_temporal_agent(
             label_baseline=s.get("label_baseline", ""),
             label_new=s.get("label_new", ""),
             narrative=ntext,
+            rag_error=rag_error,
         )
         d = out.model_dump()
         if err:

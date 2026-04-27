@@ -5,14 +5,11 @@ import json
 from typing import Any
 
 from aequitas_ai import (
-    DEFAULT_FINANCIAL_SCHEMA,
-    SqlGraphConfig,
     SupabaseRagConfig,
     SupabaseRagRetriever,
-    build_sql_engine_graph,
 )
-from fastapi import APIRouter, HTTPException
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from fastapi import APIRouter, HTTPException, Request
+from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -20,7 +17,6 @@ from app.config import settings
 
 router = APIRouter(prefix="/v1/debate", tags=["debate"])
 
-_sql_graph: Any | None = None
 _max_rag_chunks = 8
 _max_chunk_chars = 500
 _max_sql_rows = 20
@@ -79,27 +75,6 @@ class DebateRiskResponse(BaseModel):
     warning: str | None = None
 
 
-def _get_sql_graph() -> Any:
-    global _sql_graph
-    if _sql_graph is None:
-        if not settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is required for SQL graph generation.")
-        llm = ChatOpenAI(
-            model=settings.sql_model,
-            temperature=0,
-            api_key=settings.openai_api_key,
-        )
-        cfg = SqlGraphConfig(
-            architect_llm=llm,
-            validator_llm=llm,
-            database_url=settings.database_url,
-            max_result_rows=_max_sql_rows,
-            schema_ddl=DEFAULT_FINANCIAL_SCHEMA,
-        )
-        _sql_graph = build_sql_engine_graph(cfg)
-    return _sql_graph
-
-
 def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, v))
 
@@ -152,14 +127,15 @@ async def _retrieve_rag(metric: str) -> tuple[list[RagSource], bool, str | None]
     return sources, bool(sources), None
 
 
-async def _run_sql_context(metric: str) -> tuple[str | None, list[dict[str, Any]], bool, str | None]:
+async def _run_sql_context(
+    metric: str, graph: Any
+) -> tuple[str | None, list[dict[str, Any]], bool, str | None]:
     sql_query = (
         "Read-only risk assessment support query. "
         "Generate one SQL SELECT/CTE using available schema to surface historical trends, "
         f"directionality, and risk-relevant signals for metric: {metric!r}."
     )
     try:
-        graph = _get_sql_graph()
         out = await graph.ainvoke(
             {
                 "user_query": sql_query,
@@ -196,11 +172,19 @@ async def _run_debater_openai(client: OpenAI, system: str, user_text: str) -> st
 
 
 @router.post("/risk-assessment", response_model=DebateRiskResponse)
-async def post_risk_assessment(body: DebateRiskRequest) -> DebateRiskResponse:
+async def post_risk_assessment(
+    request: Request, body: DebateRiskRequest
+) -> DebateRiskResponse:
     if not settings.openai_api_key:
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is required.")
+    graph = getattr(request.app.state, "sql_graph", None)
+    if graph is None:
+        raise HTTPException(
+            status_code=503,
+            detail="SQL graph is unavailable. Check OPENAI_API_KEY and startup logs.",
+        )
 
-    sql, sql_rows, used_sql, sql_warning = await _run_sql_context(body.metric)
+    sql, sql_rows, used_sql, sql_warning = await _run_sql_context(body.metric, graph)
     rag_sources, used_rag, rag_warning = await _retrieve_rag(body.metric)
 
     rag_blob = "\n".join(

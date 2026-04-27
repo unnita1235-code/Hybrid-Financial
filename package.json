@@ -10,9 +10,15 @@
     "build:web": "npm run build -w @aequitas/web",
     "lint:web": "npm run lint -w @aequitas/web",
     "format:web": "prettier --check \"apps/web/**/*.{ts,tsx,js,json,css,md}\"",
-    "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web"
+    "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web",
+    "deploy:bootstrap:vercel": "node scripts/deploy/bootstrap-vercel.js",
+    "deploy:bootstrap:railway": "node scripts/deploy/bootstrap-railway.js",
+    "deploy:setup:vercel": "node scripts/deploy/setup-vercel-project.js",
+    "deploy:setup:railway": "node scripts/deploy/setup-railway-service.js",
+    "deploy:smoke": "node scripts/deploy/smoke-check.js"
   },
   "devDependencies": {
+    "playwright": "^1.55.0",
     "prettier": "^3.4.2"
   }
 }

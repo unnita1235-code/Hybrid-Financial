@@ -6,6 +6,7 @@ normalizes the same event types as :mod:`app.routers.audit` sessions.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from collections.abc import AsyncIterator
@@ -15,12 +16,9 @@ from typing import Any
 from uuid import UUID
 
 from aequitas_ai import (
-    DEFAULT_FINANCIAL_SCHEMA,
-    SqlGraphConfig,
     SupabaseRagConfig,
     SupabaseRagRetriever,
     build_hybrid_sources,
-    build_sql_engine_graph,
     run_hybrid_synthesis,
 )
 from fastapi import APIRouter, HTTPException, Request
@@ -71,37 +69,23 @@ def _jsonable_row(r: dict[str, Any]) -> dict[str, Any]:
 def _dumps(obj: Any) -> str:
     return json.dumps(obj, default=_json_default)
 
-_insight_sql_graph: Any | None = None
 _max_sql_rows = 5_000
 _max_rag = 8
+_ainvoke_timeout_s = 120.0
 
 
 class InsightStreamBody(BaseModel):
     query: str = Field(min_length=2, max_length=4_000)
 
 
-def _get_sql_graph() -> Any:
-    global _insight_sql_graph
-    if _insight_sql_graph is None:
-        if not settings.openai_api_key:
-            raise HTTPException(
-                status_code=503,
-                detail="OPENAI_API_KEY is required for the SQL (Architect) pipeline.",
-            )
-        llm = ChatOpenAI(
-            model=settings.sql_model,
-            temperature=0,
-            api_key=settings.openai_api_key,
+def _get_sql_graph(request: Request) -> Any:
+    graph = getattr(request.app.state, "sql_graph", None)
+    if graph is None:
+        raise HTTPException(
+            status_code=503,
+            detail="SQL graph is unavailable. Check OPENAI_API_KEY and startup logs.",
         )
-        cfg = SqlGraphConfig(
-            architect_llm=llm,
-            validator_llm=llm,
-            database_url=settings.database_url,
-            max_result_rows=_max_sql_rows,
-            schema_ddl=DEFAULT_FINANCIAL_SCHEMA,
-        )
-        _insight_sql_graph = build_sql_engine_graph(cfg)
-    return _insight_sql_graph
+    return graph
 
 
 def _synthesis_llm() -> BaseChatModel:
@@ -217,15 +201,24 @@ async def _stream_events(
 
     audit = str(session_id) if session_id else ""
 
-    g = _get_sql_graph()
-    st = await g.ainvoke(
-        {
-            "user_query": uq,
-            "retry_count": 0,
-            "generated_sql": None,
-            "error_message": None,
-        }
-    )
+    g = _get_sql_graph(request)
+    try:
+        st = await asyncio.wait_for(
+            g.ainvoke(
+                {
+                    "user_query": uq,
+                    "retry_count": 0,
+                    "generated_sql": None,
+                    "error_message": None,
+                }
+            ),
+            timeout=_ainvoke_timeout_s,
+        )
+    except TimeoutError:
+        yield (
+            f"data: {_dumps({'type': 'error', 'message': 'SQL pipeline timed out after 120s.'})}\n\n"
+        )
+        return
     err = (st.get("error_message") or "").strip() if isinstance(st, dict) else None
     sql = (st.get("generated_sql") or "").strip() if isinstance(st, dict) else None
     row_data = st.get("sql_rows") if isinstance(st, dict) else None

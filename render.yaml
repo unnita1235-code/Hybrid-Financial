@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: aequitas-api
+    runtime: docker
+    plan: starter
+    branch: main
+    rootDir: .
+    dockerfilePath: ./apps/server/Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SYNC_DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: ENVIRONMENT
+        value: production

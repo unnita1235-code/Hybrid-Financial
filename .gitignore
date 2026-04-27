@@ -47,6 +47,8 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+artifacts/**
+!artifacts/.gitkeep
 
 # DB / local
 *.db

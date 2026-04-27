@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Search } from "lucide-react";
+import { FileText, Mic, MicOff, Search } from "lucide-react";
 import { useCallback, useState } from "react";
 import { RealitySimulationToggle } from "@/components/dashboard/reality-simulation-toggle";
+import { useVoiceInput } from "@/lib/hooks/use-voice-input";
 import { cn } from "@/lib/utils";
 
 export type CommandRunOptions = {
@@ -28,6 +29,7 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
   const [simulation, setSimulation] = useState(false);
   const [whatIf, setWhatIf] = useState("");
   const [agentMode, setAgentMode] = useState<"hybrid" | "temporal">("hybrid");
+  const voice = useVoiceInput();
 
   const submit = useCallback(() => {
     const q = v.trim();
@@ -41,6 +43,16 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
   }, [v, isBusy, onRun, simulation, whatIf, agentMode]);
 
   const canSubmit = !!v.trim() && !isBusy && (!simulation || !!whatIf.trim());
+
+  const applyTranscript = useCallback(() => {
+    if (!voice.transcript.trim()) return;
+    setV((prev) =>
+      prev.trim()
+        ? `${prev.trim()} ${voice.transcript.trim()}`
+        : voice.transcript.trim(),
+    );
+    voice.setTranscript("");
+  }, [voice]);
 
   return (
     <div
@@ -128,6 +140,27 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
             />
           </div>
           <button
+            type="button"
+            onClick={voice.start}
+            disabled={!voice.supported || isBusy || voice.state === "listening"}
+            className="shrink-0 rounded-md border border-border px-2.5 py-2 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+            title="Start voice input"
+          >
+            <Mic className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              voice.stop();
+              applyTranscript();
+            }}
+            disabled={voice.state !== "listening"}
+            className="shrink-0 rounded-md border border-border px-2.5 py-2 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+            title="Stop voice input"
+          >
+            <MicOff className="h-3.5 w-3.5" />
+          </button>
+          <button
             type="submit"
             disabled={!canSubmit}
             className="shrink-0 rounded-md border border-white/20 bg-white px-4 py-2.5 text-xs font-medium tracking-wide text-black transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
@@ -156,6 +189,11 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
               committed.
             </p>
           </div>
+        )}
+        {voice.error && (
+          <p className="text-[10px] text-destructive">
+            {voice.error} Voice features fallback to typed input.
+          </p>
         )}
       </form>
     </div>

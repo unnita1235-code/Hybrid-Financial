@@ -7,13 +7,7 @@ type Props = {
   searchParams: Promise<{ authorization_id?: string }>;
 };
 
-function Shell({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-slate-50">
       <div className="glass-terminal w-full max-w-md rounded-lg border p-6">
@@ -32,8 +26,8 @@ export default async function OAuthConsentPage({ searchParams }: Props) {
       <Shell title="Configuration required">
         <p>
           Set <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-          <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> in{" "}
-          <code className="text-cyan-400/90">.env.local</code>.
+          <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
+          in <code className="text-cyan-400/90">.env.local</code>.
         </p>
       </Shell>
     );
@@ -42,7 +36,10 @@ export default async function OAuthConsentPage({ searchParams }: Props) {
   if (!authorizationId) {
     return (
       <Shell title="Invalid request">
-        <p>Missing <code className="text-cyan-400/90">authorization_id</code> query parameter.</p>
+        <p>
+          Missing <code className="text-cyan-400/90">authorization_id</code> query
+          parameter.
+        </p>
       </Shell>
     );
   }

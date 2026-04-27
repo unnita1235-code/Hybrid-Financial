@@ -50,6 +50,21 @@ export default function DebatePage() {
   }, [effectiveMetric]);
 
   const scorePct = result ? convictionPercent(result.conviction) : 50;
+  const qualityScore = result
+    ? Math.round(
+        ((result.e_bull + result.e_bear) / 2) * 50 +
+          Math.min(
+            50,
+            (result.bull_argument.length + result.bear_argument.length) / 80,
+          ),
+      )
+    : 0;
+  const consistencyScore = result
+    ? Math.round((1 - Math.abs(result.e_bull - result.e_bear)) * 100)
+    : 0;
+  const evidenceDensity = result
+    ? Math.round(((result.e_bull + result.e_bear) / 2) * 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-100">
@@ -127,6 +142,32 @@ export default function DebatePage() {
 
         {result && (
           <>
+            <section className="grid gap-3 sm:grid-cols-3">
+              <div className="glass-terminal rounded-lg border border-white/10 p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                  Argument quality
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-100">
+                  {qualityScore}/100
+                </p>
+              </div>
+              <div className="glass-terminal rounded-lg border border-white/10 p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                  Evidence density
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-100">
+                  {evidenceDensity}%
+                </p>
+              </div>
+              <div className="glass-terminal rounded-lg border border-white/10 p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                  Consistency score
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-100">
+                  {consistencyScore}%
+                </p>
+              </div>
+            </section>
             <section className="glass-terminal rounded-lg border border-white/10 p-4">
               <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 <Scale className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -185,6 +226,14 @@ export default function DebatePage() {
                 "glass-terminal rounded-lg border border-white/10 p-4 text-xs text-slate-400",
               )}
             >
+              <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                Judge rationale criteria
+              </p>
+              <ul className="mb-3 list-disc space-y-1 pl-4 text-xs text-slate-400">
+                <li>Evidence coverage across SQL and RAG signals.</li>
+                <li>Internal consistency between claim and cited support.</li>
+                <li>Practical actionability for portfolio risk decisions.</li>
+              </ul>
               <div className="grid gap-2 sm:grid-cols-2">
                 <p>
                   Evidence Bull:{" "}
@@ -201,6 +250,17 @@ export default function DebatePage() {
                 <p>
                   Weight w2:{" "}
                   <span className="font-mono text-slate-300">{result.w2}</span>
+                </p>
+              </div>
+              <div className="mt-3 rounded border border-white/10 bg-zinc-900/30 p-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                  Evidence trace snippets
+                </p>
+                <p className="mt-1 text-xs text-slate-300">
+                  Bull snippet: {(result.bull_argument || "").slice(0, 160)}...
+                </p>
+                <p className="mt-1 text-xs text-slate-300">
+                  Bear snippet: {(result.bear_argument || "").slice(0, 160)}...
                 </p>
               </div>
             </section>

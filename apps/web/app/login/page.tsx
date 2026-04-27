@@ -12,8 +12,8 @@ export default async function LoginPage({ searchParams }: Props) {
       <div className="glass-terminal w-full max-w-md rounded-lg border p-6">
         <h1 className="text-lg font-semibold tracking-tight text-slate-100">Sign in</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Use the email and password for your Supabase user (enable Email in Authentication
-          → Providers).
+          Use the email and password for your Supabase user (enable Email in
+          Authentication → Providers).
         </p>
         <LoginForm defaultNext={next} />
       </div>

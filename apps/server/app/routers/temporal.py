@@ -2,6 +2,7 @@ r"""Temporal agent over WebSocket; phase logs (see :mod:`app.graph.temporal`).""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, Literal
@@ -167,10 +168,12 @@ async def temporal_websocket(websocket: WebSocket) -> None:
         return
     except Exception as e:  # noqa: BLE001
         log.exception("temporal WebSocket run failed")
+        if isinstance(e, asyncio.TimeoutError) or "timed out" in str(e).lower():
+            message = "The AI took too long to respond. Please try a simpler query."
+        else:
+            message = f"Temporal run failed: {e!s}"
         try:
-            await websocket.send_json(
-                {"type": "error", "message": f"Temporal run failed: {e!s}"}
-            )
+            await websocket.send_json({"type": "error", "message": message})
         except Exception:
             pass
     finally:

@@ -50,8 +50,8 @@ export function LoginForm({ defaultNext }: Props) {
   if (!isSupabaseConfigured()) {
     return (
       <p className="text-sm text-slate-400">
-        Set <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_URL</code> and a publishable
-        or anon key in <code className="text-cyan-400/90">.env.local</code>.
+        Set <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_URL</code> and a
+        publishable or anon key in <code className="text-cyan-400/90">.env.local</code>.
       </p>
     );
   }

@@ -321,7 +321,7 @@ export function DashboardClient() {
   );
 
   return (
-    <div className="flex h-screen min-h-0 w-full flex-col overflow-hidden bg-zinc-950 text-slate-50">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-zinc-950 text-slate-50">
       <div className="flex min-h-0 flex-1">
         <SavedReportsSidebar onSelect={onSaved} />
         <div className="flex min-w-0 flex-1 flex-col">

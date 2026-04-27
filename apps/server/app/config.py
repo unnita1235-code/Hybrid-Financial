@@ -5,12 +5,16 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "Aequitas FI"
+    app_env: str = "dev"
+    environment: str = "development"
     database_url: str = (
         "postgresql+asyncpg://aequitas:aequitas_dev@localhost:5432/aequitas"
     )
+    cors_origins: str = "http://localhost:3000,http://localhost:3001"
     # Model routing (configure keys in .env; names reflect product choice)
     sql_model: str = "o3-mini"
     synthesis_model: str = "claude-3-5-sonnet-20241022"
+    alert_triage_model: str = "claude-3-5-sonnet-20241022"
     # Shadow analyst (APScheduler, Z-score, notifications)
     shadow_analyst_enabled: bool = True
     news_api_key: str | None = None
@@ -33,7 +37,7 @@ class Settings(BaseSettings):
     # dev: trust X-User-Id, X-User-Role (local + integration tests)
     # supabase: HS256 with SUPABASE_JWT_SECRET; role in app_metadata.role
     # clerk: RS256 via Clerk JWKS; role in public_metadata["aequitas_role"] or o.claims
-    auth_provider: str = "dev"
+    auth_provider: str = "supabase"
     supabase_jwt_secret: str | None = None
     clerk_jwks_url: str | None = None
     clerk_authorized_parties: str = ""
@@ -41,6 +45,8 @@ class Settings(BaseSettings):
     rbac_elevated_roles: str = ""
     # Comma list of SQL table names (no schema); empty → salaries, m_and_a_plans
     rbac_executive_tables: str = ""
+    rate_limit_rpm: int = 30
+    rate_limit_rph: int = 300
     # Local Presidio redaction around synthesis LLM (temporal narrative, etc.).
     # Requires a spaCy model, e.g. ``python -m spacy download en_core_web_sm``.
     pii_redaction_enabled: bool = True
@@ -49,6 +55,9 @@ class Settings(BaseSettings):
     use_postgres_checkpointer: bool = True
     # If true, do not fall back to MemorySaver when Postgres checkpointer init fails.
     checkpointer_postgres_required: bool = False
+
+    def parsed_cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()

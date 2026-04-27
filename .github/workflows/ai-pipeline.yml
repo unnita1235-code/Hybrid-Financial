@@ -91,3 +91,35 @@ jobs:
         run: |
           npm ci
           npm run build:web
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for hardcoded secrets
+        run: python testing_suite/verify_no_api_keys.py
+      - name: Check auth_provider default is not "dev" in production config
+        run: |
+          if grep -n 'auth_provider.*=.*"dev"' apps/server/app/config.py; then
+            echo "WARNING: auth_provider defaults to 'dev' — ensure ENVIRONMENT var is set in deployment"
+          fi
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install and type-check
+        working-directory: apps/web
+        run: npm ci && npx tsc --noEmit
+
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install ruff
+      - run: ruff check packages/ai-core packages/database apps/server --ignore E501

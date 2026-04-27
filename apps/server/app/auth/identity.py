@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 
 import jwt
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from jwt import PyJWKClient
 
 from app.config import settings
@@ -100,3 +100,17 @@ async def get_identity(request: Request) -> Identity:
     if settings.clerk_jwks_url:
         return _clerk(token)
     return _dev_identity(request)
+
+
+def require_role(required_roles: list[str]):
+    async def _require_role_dependency(request: Request) -> Identity:
+        identity = await get_identity(request)
+        allowed_roles = [r.lower() for r in required_roles]
+        if identity.role.lower() not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Role '{identity.role}' is not authorized. Required: {required_roles}",
+            )
+        return identity
+
+    return Depends(_require_role_dependency)

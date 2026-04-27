@@ -53,16 +53,28 @@ flowchart LR
 
 ## Repository layout
 
-```
+```text
 .
 ├── apps/
-│   ├── web/                 # Next.js (App Router), Tailwind, shadcn-ready
-│   └── server/              # FastAPI + LangGraph wiring (`app/`)
+│   ├── web/
+│   │   ├── app/             # dashboard, research, alerts, portfolio, debate, reports, admin
+│   │   ├── components/      # dashboard, charts, ai, ui
+│   │   └── lib/             # api adapters, hooks, streams/ws, supabase
+│   └── server/
+│       ├── app/             # routers, auth, graph registry, services, rbac
+│       ├── api/             # ingest + debate orchestration
+│       └── middleware/      # redactor, rate limiter, request id
 ├── packages/
-│   ├── database/            # aequitas_database, Alembic, pgvector
-│   └── ai-core/             # aequitas_ai, prompts, agent state
-├── docker-compose.yml       # Local Postgres 16 + pgvector
-├── requirements-local.txt  # Editable Python packages
+│   ├── database/            # aequitas_database models + Alembic migrations
+│   └── ai-core/             # agents, prompts, tools, sql/rag engines
+├── infra/
+│   ├── docker-compose.yml      # Local Postgres + Redis (pgvector image)
+│   ├── docker-compose.prod.yml # Production stack
+│   └── nginx/nginx.conf        # Reverse proxy template
+├── .github/workflows/
+│   ├── ai-pipeline.yml
+│   └── deploy.yml
+├── requirements-local.txt
 └── README.md
 ```
 
@@ -72,15 +84,15 @@ flowchart LR
 - **Python 3.11+** (for API and packages)
 - **Docker** (for `docker-compose` database)
 
-## Database (local)
+## Local infrastructure
 
 From the repository root:
 
 ```bash
-docker compose up -d
+docker compose -f infra/docker-compose.yml up -d
 ```
 
-Default connection (matches `docker-compose.yml`):
+Default Postgres connection (matches `infra/docker-compose.yml`):
 
 - **URL (async, e.g. SQLAlchemy):** `postgresql+asyncpg://aequitas:aequitas_dev@localhost:5432/aequitas`
 - **URL (sync, e.g. Alembic with psycopg2):** `postgresql+psycopg2://aequitas:aequitas_dev@localhost:5432/aequitas`
@@ -95,6 +107,16 @@ cd packages/database
 ```
 
 (Use `alembic` from the same venv that has the package installed, or `python -m alembic` after `pip install -e .`.)
+
+## Production-style compose
+
+Start production-shaped services (API + Postgres + Redis):
+
+```bash
+docker compose -f infra/docker-compose.prod.yml up -d --build
+```
+
+Nginx reverse proxy template: `infra/nginx/nginx.conf`.
 
 ## Python environment
 
@@ -144,8 +166,19 @@ Wire your provider clients (OpenAI, Anthropic, or unified gateways) in the LangG
 
 - **[`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml)** — `push` / `pull_request` on `main`: Prettier + ESLint on `apps/web`, `pip install -r requirements-local.txt` + `testing_suite` deps, `pytest`, faithfulness demo script, optional DeepEval when **`OPENAI_API_KEY`** (and for full RAG tests, Supabase secrets as configured) is present.  
 - **[`.github/workflows/github-action.yml`](.github/workflows/github-action.yml)** — additional secret scan and builds on a broader set of branches; keep in sync with your branch strategy.
+- **[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)** — automated deployment pipeline for Vercel (frontend) and Railway (backend), including smoke checks.
 
 **Secrets (AI eval job):** add **`OPENAI_API_KEY`**; optionally **`SUPABASE_URL`** and **`SUPABASE_SERVICE_KEY`** for tests that call vector RPCs.
+
+## Automated Vercel + Railway deploy
+
+Deployment automation scripts are in `scripts/deploy/`:
+
+- `bootstrap-vercel.js` and `bootstrap-railway.js` for browser-assisted onboarding with CAPTCHA/OTP checkpoints.
+- `setup-vercel-project.js` and `setup-railway-service.js` for API-driven project/service provisioning and env setup.
+- `smoke-check.js` for post-deploy health verification.
+
+Full runbook: [`docs/deployment-runbook.md`](docs/deployment-runbook.md).
 
 ## Conventions
 

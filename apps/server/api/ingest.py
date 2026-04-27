@@ -17,7 +17,6 @@ from functools import lru_cache
 from typing import Any, Literal, cast
 
 import httpx
-import nest_asyncio
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -31,10 +30,8 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
-# LlamaParse may register nested asyncio; safe for FastAPI worker processes.
-nest_asyncio.apply()
-
-_CHUNK_MAX = 4000
+_CHUNK_MAX = 3000  # IMPROVED: default max chunk size for semantic chunking
+_CHUNK_OVERLAP = 200  # IMPROVED: chunk overlap for retrieval continuity
 _IDENT_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
@@ -62,6 +59,80 @@ class IngestChunk:
     chunk_index: int
     source_label: str
     parser: str = ""
+
+
+def _chunk_text_semantic(
+    text: str,
+    max_chars: int = 3000,
+    overlap_chars: int = 200,
+) -> list[str]:
+    # IMPROVED: chunk semantically by paragraph -> sentence -> chars with overlap.
+    body = (text or "").strip()
+    if not body:
+        return []
+    if len(body) <= max_chars:
+        return [body]
+
+    # Prefer paragraph boundaries: explicit blank lines or newline before uppercase line.
+    paragraphs = [
+        p.strip()
+        for p in re.split(r"\n{2,}|\n(?=[A-Z][^\n]*)", body)
+        if p and p.strip()
+    ]
+    if not paragraphs:
+        paragraphs = [body]
+
+    units: list[str] = []
+    for para in paragraphs:
+        if len(para) <= max_chars:
+            units.append(para)
+            continue
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", para) if s.strip()]
+        if not sentences:
+            sentences = [para]
+        for sent in sentences:
+            if len(sent) <= max_chars:
+                units.append(sent)
+                continue
+            # Fall back to hard character splitting for pathological long tokens.
+            for i in range(0, len(sent), max_chars):
+                part = sent[i : i + max_chars].strip()
+                if part:
+                    units.append(part)
+
+    chunks: list[str] = []
+    current = ""
+    for unit in units:
+        sep = "\n\n" if current else ""
+        candidate = f"{current}{sep}{unit}" if current else unit
+        if len(candidate) <= max_chars:
+            current = candidate
+            continue
+        if current:
+            chunks.append(current.strip())
+        current = unit
+    if current:
+        chunks.append(current.strip())
+
+    if overlap_chars <= 0 or len(chunks) <= 1:
+        return chunks
+
+    overlapped: list[str] = []
+    prev = ""
+    for ch in chunks:
+        if prev:
+            overlap = prev[-overlap_chars:].strip()
+            if overlap:
+                combined = f"{overlap}\n\n{ch}".strip()
+                if len(combined) > max_chars:
+                    combined = combined[-max_chars:].strip()
+                overlapped.append(combined)
+            else:
+                overlapped.append(ch)
+        else:
+            overlapped.append(ch)
+        prev = ch
+    return overlapped
 
 
 # ---------------------------------------------------------------------------
@@ -147,18 +218,19 @@ def _parse_pdf_unstructured(data: bytes) -> list[ParsedPage]:
 
 def _parse_pdf_llamaparse(
     data: bytes,
-    filename: str,
     api_key: str,
 ) -> list[ParsedPage]:
+    import nest_asyncio
     from llama_parse import LlamaParse
+
+    nest_asyncio.apply()  # FIXED: apply only where LlamaParse event loop nesting is needed
 
     parser = LlamaParse(
         api_key=api_key,
         result_type="markdown",
         verbose=False,
     )
-    extra = {"file_name": filename or "document.pdf"}
-    documents = cast(Any, parser.load_data(data, extra_info=extra))
+    documents = cast(Any, parser.load_data(data))
     out: list[ParsedPage] = []
     for d in documents or []:
         t = (getattr(d, "text", None) or getattr(d, "get_content", lambda: "")()) or ""
@@ -205,7 +277,6 @@ def parse_pdf_bytes(
         try:
             pages = _parse_pdf_llamaparse(
                 data,
-                filename or "document.pdf",
                 key,
             )
         except Exception as e:  # noqa: BLE001
@@ -224,30 +295,22 @@ def parse_pdf_bytes(
 
     chunks: list[IngestChunk] = []
     for pg in pages:
-        body = pg.text
-        if len(body) <= _CHUNK_MAX:
+        # IMPROVED: replace fixed-width splitting with semantic chunking.
+        split_parts = _chunk_text_semantic(
+            pg.text,
+            max_chars=_CHUNK_MAX,
+            overlap_chars=_CHUNK_OVERLAP,
+        )
+        for idx, part in enumerate(split_parts):
             chunks.append(
                 IngestChunk(
-                    text=body,
+                    text=part,
                     page_number=pg.page_number,
-                    chunk_index=0,
+                    chunk_index=idx,
                     source_label=label,
                     parser=pg.parser,
                 )
             )
-            continue
-        part = 0
-        for i in range(0, len(body), _CHUNK_MAX):
-            chunks.append(
-                IngestChunk(
-                    text=body[i : i + _CHUNK_MAX],
-                    page_number=pg.page_number,
-                    chunk_index=part,
-                    source_label=label,
-                    parser=pg.parser,
-                )
-            )
-            part += 1
     return chunks
 
 
@@ -373,9 +436,11 @@ async def index_chunks(
     for c, emb in zip(chunks, vectors, strict=True):
         row_id = _chunk_uuid(f"{c.source_label}|{document_title or ''}", c.page_number, c.chunk_index)
         meta: dict[str, Any] = {
+            "source": c.source_label,  # IMPROVED: normalized metadata baseline across parsers
             "source_url": source_url,
             "page_number": c.page_number,
             "chunk_index": c.chunk_index,
+            "char_count": len(c.text),  # IMPROVED: normalized metadata baseline across parsers
             "ingested_at": ts,
             "document_title": document_title,
             "parser": c.parser,

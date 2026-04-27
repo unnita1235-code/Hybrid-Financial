@@ -21,7 +21,8 @@ export async function POST(request: Request) {
   const supabase = await getSupabaseServerClient();
 
   if (decision === "approve") {
-    const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
+    const { data, error } =
+      await supabase.auth.oauth.approveAuthorization(authorizationId);
     if (error) {
       return badRequest(error.message);
     }
