@@ -74,7 +74,7 @@ class PortfolioOut(BaseModel):
     updated_at: str | None
 
     @classmethod
-    def from_row(cls, row) -> "PortfolioOut":
+    def from_row(cls, row) -> PortfolioOut:
         return cls(
             id=row.id,
             user_id=row.user_id,
@@ -105,7 +105,7 @@ class PositionOut(BaseModel):
     created_at: str
 
     @classmethod
-    def from_row(cls, row) -> "PositionOut":
+    def from_row(cls, row) -> PositionOut:
         return cls(
             id=row.id,
             portfolio_id=row.portfolio_id,

@@ -12,6 +12,12 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Any, Literal, cast
 
+from aequitas_ai import (
+    DEFAULT_FINANCIAL_SCHEMA,
+    SqlGraphConfig,
+    build_sql_engine_graph,
+)
+from aequitas_ai.sql_engine import _is_read_only_select
 from fastapi import HTTPException
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -20,12 +26,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from aequitas_ai import (
-    DEFAULT_FINANCIAL_SCHEMA,
-    SqlGraphConfig,
-    build_sql_engine_graph,
-)
-from aequitas_ai.sql_engine import _is_read_only_select
 from app.config import settings
 from app.rbac.sensitive_sql import assert_sql_rbac
 

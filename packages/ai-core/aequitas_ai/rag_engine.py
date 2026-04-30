@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, NotRequired, Protocol, TypedDict
+from typing import Any, Awaitable, Callable, Protocol, TypedDict
 
 import httpx
 from langchain_core.language_models.chat_models import BaseChatModel

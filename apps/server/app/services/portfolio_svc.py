@@ -4,10 +4,9 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from aequitas_database.models.portfolio import Portfolio, Position
 from sqlalchemy import Select, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from aequitas_database.models.portfolio import Portfolio, Position
 
 
 def _to_decimal(value: Decimal | int | float | str) -> Decimal:
