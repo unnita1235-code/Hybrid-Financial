@@ -48,8 +48,9 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # Exclude LLM-judge DeepEval tests in CI (quota / optional); run locally with: pytest -m requires_llm
-          pytest -m "not requires_llm"
+          # Exclude LLM-judge DeepEval tests in CI (quota / optional); run locally with:
+          #   pytest -q testing_suite/test_deepeval_sql_rag.py
+          pytest --ignore=testing_suite/test_deepeval_sql_rag.py
       - name: Faithfulness script (demo)
         run: |
           python testing_suite/calculate_faithfulness.py --demo
