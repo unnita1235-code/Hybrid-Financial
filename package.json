@@ -1,8 +1,13 @@
 {
   "name": "aequitas-fi",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "clean:web": "node -e \"const fs=require('fs'),p='apps/web/.next';if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true});console.log('clean:web: removed apps/web/.next (if it existed). If edge ENOENT persists, use npm run dev:web:webpack. On Windows, exclude that path from real-time scan/sync.')\"",
     "dev:web": "npm run dev -w @aequitas/web",
@@ -11,15 +16,23 @@
     "typecheck:web": "npm run typecheck -w @aequitas/web",
     "lint:web": "npm run lint -w @aequitas/web",
     "format:web": "prettier --check \"apps/web/**/*.{ts,tsx,js,json,css,md}\"",
-    "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web",
+    "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line -m \"not requires_llm\" && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web",
     "deploy:bootstrap:vercel": "node scripts/deploy/bootstrap-vercel.js",
     "deploy:bootstrap:railway": "node scripts/deploy/bootstrap-railway.js",
     "deploy:setup:vercel": "node scripts/deploy/setup-vercel-project.js",
+    "deploy:vercel:patch-root": "node scripts/deploy/vercel-patch-root-directory.js",
     "deploy:setup:railway": "node scripts/deploy/setup-railway-service.js",
     "deploy:smoke": "node scripts/deploy/smoke-check.js",
+    "deploy:vercel:url": "node scripts/deploy/vercel-resolve-production-url.js",
+    "deploy:verify-live": "node scripts/deploy/verify-live.js",
+    "test:postman": "node scripts/deploy/run-postman-newman.js",
+    "deploy:vercel:prod": "npx vercel deploy --prod --yes",
+    "deploy:verify:production": "node scripts/deploy/post-deploy-verify.js",
     "deploy:worker": "npm run deploy -w @aequitas/api-worker"
   },
   "devDependencies": {
+    "newman": "^6.2.2",
+    "next": "^15.1.0",
     "playwright": "^1.55.0",
     "prettier": "^3.4.2"
   }

@@ -1,0 +1,66 @@
+{
+  "info": {
+    "_postman_id": "aequitas-web-api-smoke",
+    "name": "Aequitas Web + Worker API",
+    "description": "Smoke: Worker health, Next BFF validation (400 without metric), home page. Override FRONTEND_URL and BACKEND_URL via npm run test:postman or env.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "FRONTEND_URL", "value": "http://127.0.0.1:3000" },
+    { "key": "BACKEND_URL", "value": "https://api.aequitasfi.workers.dev" }
+  ],
+  "item": [
+    {
+      "name": "Worker /health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('health 2xx', () => pm.response.to.be.success);"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{BACKEND_URL}}/health"
+      }
+    },
+    {
+      "name": "Next BFF debate (400 without metric)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('validation 400', () => pm.response.code === 400);"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{FRONTEND_URL}}/api/debate/risk-assessment"
+      }
+    },
+    {
+      "name": "Frontend home",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('home 2xx', () => pm.response.to.be.success);"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{FRONTEND_URL}}/"
+      }
+    }
+  ]
+}

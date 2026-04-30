@@ -11,6 +11,9 @@ venv
 env
 ENV
 
+# DeepEval local cache
+.deepeval/
+
 # Build / cache
 .next
 out
@@ -34,6 +37,9 @@ coverage
 !.env.example
 !**/.env.example
 .aws
+
+# Vercel CLI (linked project metadata; do not commit)
+.vercel
 
 # IDE / OS
 .cursor

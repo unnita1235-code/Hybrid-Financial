@@ -94,3 +94,11 @@ Checks include:
 - Rotate `CLOUDFLARE_API_TOKEN` regularly.
 - Keep `FRONTEND_URL` and `BACKEND_URL` aligned with production domains.
 - Review uploaded `deploy-smoke-artifacts` on failed runs.
+
+## 9) Vercel (optional Next.js host)
+
+- Repository root [`vercel.json`](../vercel.json) runs `npm ci`, `npm run build:web`, and sets **`outputDirectory`** to `apps/web/.next` so Vercel finds the Next build output from the workspace package. The root [`package.json`](../package.json) includes a **`next`** devDependency so Vercel can detect the framework at the repo root (the app remains [`apps/web`](../apps/web)).
+- Optionally set **Settings → General → Root Directory** to `apps/web` and simplify config; or run `npm run deploy:vercel:patch-root` with `VERCEL_TOKEN` (see [`scripts/deploy/vercel-patch-root-directory.js`](../scripts/deploy/vercel-patch-root-directory.js)).
+- Set the same public env vars as Cloudflare Pages (`NEXT_PUBLIC_AEQUITAS_API_URL`, `AEQUITAS_API_URL`, Supabase keys) in Vercel **Settings → Environment Variables**.
+- Deploy: `npm run deploy:vercel:prod` from the repo root (requires `npx vercel link` once). After deploy, run `npm run deploy:verify:production` with `FRONTEND_URL` and `BACKEND_URL` set.
+- **GitHub Actions**: [`.github/workflows/vercel-frontend.yml`](../.github/workflows/vercel-frontend.yml) deploys on push to `main` when web or lockfile changes. Add repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` (from the Vercel project **Settings → General**).

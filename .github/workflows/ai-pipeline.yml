@@ -48,7 +48,7 @@ jobs:
           pip install -r requirements-local.txt
           pip install -r testing_suite/requirements.txt
       - name: Pytest
-        run: pytest
+        run: pytest -m "not requires_llm"
       - name: Faithfulness demo
         run: python testing_suite/calculate_faithfulness.py --demo
 
