@@ -23,7 +23,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -274,7 +274,7 @@ class ShadowAnalystService:
         payload: dict[str, Any],
         user_id: UUID | None = None,
     ) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pstr = json.dumps(payload)
         ins = text(
             """

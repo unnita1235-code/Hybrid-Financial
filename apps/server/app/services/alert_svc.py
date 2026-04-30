@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -79,7 +79,7 @@ async def list_alerts(
 
 
 async def mark_read(engine: AsyncEngine, alert_id: str, user_id: str | None) -> bool:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sql = text(
         """
         UPDATE notifications
