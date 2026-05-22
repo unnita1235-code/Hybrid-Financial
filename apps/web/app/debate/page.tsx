@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { ArrowLeft, Scale, Sparkles } from "lucide-react";
 import { type DebateRiskResponse, generateDebateRiskAssessment } from "@/lib/debate";
+import { PageTemplate } from "@/components/layout/page-template";
 import { cn } from "@/lib/utils";
 
 const METRIC_PRESETS = [
@@ -67,53 +68,47 @@ export default function DebatePage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-slate-100">
-      <div className="border-b border-white/10 glass-terminal">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="border-b border-border glass-terminal">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
           <div className="inline-flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 transition hover:text-slate-200"
+              className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
               Dashboard
             </Link>
             <Link
               href="/reports"
-              className="font-mono text-xs text-slate-500 transition hover:text-slate-300"
+              className="font-mono text-xs text-muted-foreground transition hover:text-foreground"
             >
               Reports
             </Link>
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             Debate
           </span>
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-        <header>
-          <h1 className="font-mono text-lg font-medium tracking-tight text-slate-100">
-            Risk debate system
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
-            Bull and Bear run in parallel on the same RAG + SQL evidence, then a Judge
-            assigns the final conviction score.
-          </p>
-        </header>
+      <PageTemplate
+        title="Risk debate system"
+        subtitle="Bull and Bear run in parallel on the same RAG + SQL evidence, then a Judge assigns the final conviction score."
+      >
 
-        <div className="glass-terminal space-y-4 rounded-lg border border-white/10 p-4">
+        <div className="neon-card space-y-4 rounded-lg border p-4">
           <label className="block space-y-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
+            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Metric
             </span>
             <select
               value={metric}
               onChange={(e) => setMetric(e.target.value)}
-              className="w-full rounded border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500/40"
+              className="w-full rounded border border-border bg-background/70 px-3 py-2 text-base text-foreground outline-none focus:border-primary/60"
             >
               {METRIC_PRESETS.map((m) => (
-                <option key={m} value={m} className="bg-zinc-900">
+                <option key={m} value={m} className="bg-background">
                   {m}
                 </option>
               ))}
@@ -123,7 +118,7 @@ export default function DebatePage() {
               value={customMetric}
               onChange={(e) => setCustomMetric(e.target.value)}
               placeholder="Override with custom metric (optional)"
-              className="mt-1 w-full rounded border border-dashed border-white/15 bg-transparent px-3 py-2 font-mono text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-slate-500/40"
+              className="mt-1 w-full rounded border border-dashed border-border bg-transparent px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
             />
           </label>
 
@@ -133,7 +128,7 @@ export default function DebatePage() {
             type="button"
             onClick={() => void onRun()}
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white px-4 py-2.5 text-xs font-medium text-black transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md border border-primary bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground transition hover:brightness-110 hover:shadow-[0_0_18px_hsl(var(--neon-cyan)/0.45)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
             {busy ? "Debating..." : "Run risk debate"}
@@ -143,52 +138,52 @@ export default function DebatePage() {
         {result && (
           <>
             <section className="grid gap-3 sm:grid-cols-3">
-              <div className="glass-terminal rounded-lg border border-white/10 p-3">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <div className="neon-card neon-hover rounded-lg border p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   Argument quality
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-100">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {qualityScore}/100
                 </p>
               </div>
-              <div className="glass-terminal rounded-lg border border-white/10 p-3">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <div className="neon-card neon-hover rounded-lg border p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   Evidence density
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-100">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {evidenceDensity}%
                 </p>
               </div>
-              <div className="glass-terminal rounded-lg border border-white/10 p-3">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <div className="neon-card neon-hover rounded-lg border p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   Consistency score
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-100">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {consistencyScore}%
                 </p>
               </div>
             </section>
-            <section className="glass-terminal rounded-lg border border-white/10 p-4">
-              <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
+            <section className="neon-card rounded-lg border p-4">
+              <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 <Scale className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Conviction score
               </div>
               <div className="space-y-2">
-                <div className="relative h-2 rounded-full bg-zinc-700">
+                <div className="relative h-2 rounded-full bg-muted">
                   <div
-                    className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-zinc-200 bg-zinc-900"
+                    className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-border bg-background"
                     style={{ left: `calc(${scorePct}% - 8px)` }}
                     aria-hidden
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Bear (-1)</span>
-                  <span className="font-mono text-slate-300">
+                  <span className="font-mono text-foreground/90">
                     {result.conviction.toFixed(3)}
                   </span>
                   <span>Bull (+1)</span>
                 </div>
-                <p className="text-sm text-slate-300">{result.judge_synthesis}</p>
+                <p className="text-base leading-6 text-foreground/90">{result.judge_synthesis}</p>
                 {result.warning && (
                   <p className="font-mono text-xs text-amber-300/90">
                     {result.warning}
@@ -198,23 +193,23 @@ export default function DebatePage() {
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2">
-              <article className="glass-terminal rounded-lg border border-white/10 p-4">
-                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
+              <article className="neon-card neon-hover rounded-lg border p-4">
+                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                   Bull argument
                 </p>
-                <div className="max-h-[min(62vh,30rem)] overflow-y-auto rounded border border-white/5 bg-slate-950/40 p-3">
-                  <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-300">
+                <div className="max-h-[min(62vh,30rem)] overflow-y-auto rounded border border-border bg-background/60 p-3">
+                  <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground/85">
                     {result.bull_argument}
                   </pre>
                 </div>
               </article>
 
-              <article className="glass-terminal rounded-lg border border-white/10 p-4">
-                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
+              <article className="neon-card neon-hover rounded-lg border p-4">
+                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                   Bear argument
                 </p>
-                <div className="max-h-[min(62vh,30rem)] overflow-y-auto rounded border border-white/5 bg-slate-950/40 p-3">
-                  <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-300">
+                <div className="max-h-[min(62vh,30rem)] overflow-y-auto rounded border border-border bg-background/60 p-3">
+                  <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground/85">
                     {result.bear_argument}
                   </pre>
                 </div>
@@ -223,13 +218,13 @@ export default function DebatePage() {
 
             <section
               className={cn(
-                "glass-terminal rounded-lg border border-white/10 p-4 text-xs text-slate-400",
+                "neon-card rounded-lg border p-4 text-xs text-muted-foreground",
               )}
             >
-              <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                 Judge rationale criteria
               </p>
-              <ul className="mb-3 list-disc space-y-1 pl-4 text-xs text-slate-400">
+              <ul className="mb-3 list-disc space-y-1 pl-4 text-sm text-foreground/85">
                 <li>Evidence coverage across SQL and RAG signals.</li>
                 <li>Internal consistency between claim and cited support.</li>
                 <li>Practical actionability for portfolio risk decisions.</li>
@@ -237,36 +232,36 @@ export default function DebatePage() {
               <div className="grid gap-2 sm:grid-cols-2">
                 <p>
                   Evidence Bull:{" "}
-                  <span className="font-mono text-slate-300">{result.e_bull}</span>
+                  <span className="font-mono text-foreground/90">{result.e_bull}</span>
                 </p>
                 <p>
                   Evidence Bear:{" "}
-                  <span className="font-mono text-slate-300">{result.e_bear}</span>
+                  <span className="font-mono text-foreground/90">{result.e_bear}</span>
                 </p>
                 <p>
                   Weight w1:{" "}
-                  <span className="font-mono text-slate-300">{result.w1}</span>
+                  <span className="font-mono text-foreground/90">{result.w1}</span>
                 </p>
                 <p>
                   Weight w2:{" "}
-                  <span className="font-mono text-slate-300">{result.w2}</span>
+                  <span className="font-mono text-foreground/90">{result.w2}</span>
                 </p>
               </div>
-              <div className="mt-3 rounded border border-white/10 bg-zinc-900/30 p-2">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <div className="mt-3 rounded border border-border bg-background/60 p-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   Evidence trace snippets
                 </p>
-                <p className="mt-1 text-xs text-slate-300">
+                <p className="mt-1 text-sm text-foreground/85">
                   Bull snippet: {(result.bull_argument || "").slice(0, 160)}...
                 </p>
-                <p className="mt-1 text-xs text-slate-300">
+                <p className="mt-1 text-sm text-foreground/85">
                   Bear snippet: {(result.bear_argument || "").slice(0, 160)}...
                 </p>
               </div>
             </section>
           </>
         )}
-      </main>
+      </PageTemplate>
     </div>
   );
 }

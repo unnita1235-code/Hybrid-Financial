@@ -1,5 +1,9 @@
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export default function DashboardPage() {
-  return <DashboardClient />;
+  return (
+    <div className="animate-fade-in-up">
+      <DashboardClient />
+    </div>
+  );
 }

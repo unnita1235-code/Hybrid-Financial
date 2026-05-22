@@ -52,6 +52,8 @@ jobs:
         run: npm run typecheck -w @aequitas/api-worker
       - name: Worker tests
         run: npm run test -w @aequitas/api-worker
+      - name: AI golden intent eval gate
+        run: npm run eval:golden
       - name: Backend tests
         run: |
           python -m pip install --upgrade pip
@@ -70,14 +72,19 @@ jobs:
       - name: Install deps
         run: npm ci
       - name: Deploy Cloudflare Worker API
+        working-directory: apps/api-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           UPSTREAM_API_BASE: ${{ secrets.UPSTREAM_API_BASE }}
-          APP_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
-          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
-          npm run deploy -w @aequitas/api-worker -- --env ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          set -euo pipefail
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            # Production is the default worker (aequitas-api); wrangler.jsonc has no "production" env.
+            npx wrangler deploy
+          else
+            npx wrangler deploy --env preview
+          fi
 
   pages-deploy-mode:
     runs-on: ubuntu-latest
@@ -125,20 +132,47 @@ jobs:
     needs: [deploy-backend-worker, pages-deploy-mode, smoke-check]
     if: ${{ always() && (needs.deploy-backend-worker.result == 'failure' || needs.pages-deploy-mode.result == 'failure' || needs.smoke-check.result == 'failure') }}
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Attempt worker rollback to previous version
-        run: |
-          echo "Use Cloudflare dashboard rollback for Worker if smoke checks fail."
-          echo "Pages rollback is managed in Cloudflare Pages deployment history."
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci
 
-      - name: Emit rollback summary
+      # Smoke failed after a successful deploy: a new (bad) version is live — rollback is correct.
+      - name: Rollback Worker after failed smoke checks
+        if: needs.deploy-backend-worker.result == 'success' && needs.smoke-check.result == 'failure'
+        working-directory: apps/api-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            npx wrangler rollback --yes
+          else
+            npx wrangler rollback --yes --env preview
+          fi
+
+      # Deploy failed: no new version was activated — do not rollback (would downgrade a healthy release).
+      - name: Deploy failure guidance (no Worker rollback)
+        if: needs.deploy-backend-worker.result == 'failure'
+        run: |
+          echo "::warning::Worker deploy failed; the currently live version was not replaced."
+          echo "Do not run wrangler rollback — that would activate an older version while production is still healthy."
+
+      - name: Emit failure handling summary
+        if: always()
         run: |
           {
             echo "## Deployment failure handling"
-            echo "- Frontend rollback: Cloudflare Pages deployment history."
-            echo "- Backend rollback: Cloudflare Workers versions/rollback."
-            echo "- Check provider dashboards and deploy-smoke-artifacts for detailed diagnostics."
+            if [ "${{ needs.deploy-backend-worker.result }}" = "success" ] && [ "${{ needs.smoke-check.result }}" = "failure" ]; then
+              echo "- Backend: attempted \`wrangler rollback\` because deploy succeeded but smoke checks failed."
+            elif [ "${{ needs.deploy-backend-worker.result }}" = "failure" ]; then
+              echo "- Backend: deploy failed — previous Worker version remains live; rollback was **not** run."
+            fi
+            echo "- Frontend rollback: Cloudflare Pages -> Deployments -> redeploy previous build."
+            echo "- Diagnostics: \`deploy-smoke-artifacts\` workflow artifact and Cloudflare dashboards."
           } >> "$GITHUB_STEP_SUMMARY"

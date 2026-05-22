@@ -14,10 +14,12 @@
     "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web",
     "deploy:bootstrap:vercel": "node scripts/deploy/bootstrap-vercel.js",
     "deploy:bootstrap:railway": "node scripts/deploy/bootstrap-railway.js",
+    "deploy:bootstrap:cloudflare-pages": "node scripts/deploy/bootstrap-cloudflare-pages.js",
     "deploy:setup:vercel": "node scripts/deploy/setup-vercel-project.js",
     "deploy:setup:railway": "node scripts/deploy/setup-railway-service.js",
     "deploy:smoke": "node scripts/deploy/smoke-check.js",
-    "deploy:worker": "npm run deploy -w @aequitas/api-worker"
+    "deploy:worker": "npm run deploy -w @aequitas/api-worker",
+    "eval:golden": "node testing_suite/eval_golden_intents.js"
   },
   "devDependencies": {
     "playwright": "^1.55.0",

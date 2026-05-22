@@ -16,6 +16,10 @@ This runbook describes production deployment using Cloudflare Pages (frontend) a
 
 - Backend worker config: [`apps/api-worker/wrangler.jsonc`](../apps/api-worker/wrangler.jsonc)
 - Deploy workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+- AI launch contract: [`docs/ai-launch-contract.md`](../docs/ai-launch-contract.md)
+- AI observability thresholds: [`docs/ai-observability-alerts.md`](../docs/ai-observability-alerts.md)
+- Incident response playbook: [`docs/incident-response-playbook.md`](../docs/incident-response-playbook.md)
+- Release sign-off packet: [`docs/release-signoff-packet.md`](../docs/release-signoff-packet.md)
 
 ## 3) Required GitHub secrets
 
@@ -73,15 +77,17 @@ From repo root:
 ```bash
 npm ci
 npx playwright install chromium
-set FRONTEND_URL=https://your-netlify-url
-set BACKEND_URL=https://your-render-url
+set FRONTEND_URL=https://your-pages-url
+set BACKEND_URL=https://your-workers-url
 npm run deploy:smoke
+npm run eval:golden
 ```
 
 Checks include:
 
 - Browser navigation for frontend routes: `/`, `/research`, `/alerts`, `/debate`
 - Backend health endpoint: `/health`
+- Golden intent API schema checks (`testing_suite/golden_intents.json`)
 
 ## 7) Rollback behavior
 

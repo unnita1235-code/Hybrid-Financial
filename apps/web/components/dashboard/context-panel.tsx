@@ -54,18 +54,18 @@ export function ContextPanel({
       <aside
         className={cn(
           "fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col",
-          "glass-terminal transition-transform duration-300 ease-out",
+          "neon-card transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
         role="complementary"
         aria-label="RAG narrative and transparency"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
               {title}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {isStreaming ? "Streaming…" : "Click the answer for step-by-step trace"}
             </p>
           </div>
@@ -73,7 +73,7 @@ export function ContextPanel({
             <button
               type="button"
               onClick={onOpenReasoning}
-              className="flex h-8 items-center gap-1 rounded border border-cyan-500/30 px-2 text-[10px] font-mono text-cyan-200/80 transition hover:border-cyan-400/50 hover:bg-cyan-500/5"
+              className="flex h-8 items-center gap-1 rounded border border-primary/40 px-2 text-[10px] font-mono text-primary transition hover:border-primary/70 hover:bg-primary/10"
             >
               <Brain className="h-3.5 w-3.5" strokeWidth={1.5} />
               Trace
@@ -81,7 +81,7 @@ export function ContextPanel({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded border border-white/10 text-slate-400 transition hover:border-slate-500/50 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded border border-border text-muted-foreground transition hover:border-ring/60 hover:text-foreground"
               aria-label="Close"
             >
               <X className="h-4 w-4" strokeWidth={1.5} />
@@ -95,7 +95,7 @@ export function ContextPanel({
             onFeedback={onFeedback}
             disabled={isStreaming}
           />
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
             Narrative
           </p>
           {isStreaming && !narrative && (
@@ -114,9 +114,9 @@ export function ContextPanel({
               }
             }}
             className={cn(
-              "rounded-md border border-white/5 p-2 transition",
+              "rounded-md border border-border p-2 transition",
               narrative && !isStreaming
-                ? "cursor-pointer border-dashed border-cyan-500/20 bg-cyan-500/[0.04] hover:border-cyan-500/35"
+                ? "neon-hover cursor-pointer border-dashed border-primary/30 bg-primary/[0.05] hover:border-primary/60"
                 : "cursor-default",
             )}
           >
@@ -132,7 +132,7 @@ export function ContextPanel({
                     width={150}
                     height={20}
                     className="opacity-85"
-                    strokeClassName="stroke-cyan-400/60"
+                    strokeClassName="stroke-primary/70"
                   />
                 </span>
               )}
@@ -143,25 +143,25 @@ export function ContextPanel({
               />
             </div>
             {isStreaming && (
-              <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-cyan-500/50 align-middle" />
+              <span className="live-pulse ml-0.5 inline-block h-3 w-0.5 bg-primary/80 align-middle" />
             )}
           </div>
           {narrative && !isStreaming && (
-            <p className="mt-2 text-[9px] text-slate-500">
+            <p className="mt-2 text-[9px] text-muted-foreground">
               Tip: click anywhere on the answer, or &quot;Trace&quot;, to open the
               pipeline YAML.
             </p>
           )}
           {sources && (
-            <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+            <div className="mt-6 space-y-3 border-t border-border pt-4">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Sources
               </p>
-              <pre className="max-h-32 overflow-x-auto overflow-y-auto rounded border border-white/10 bg-black/50 p-2 text-[10px] leading-tight text-slate-500">
+              <pre className="max-h-32 overflow-x-auto overflow-y-auto rounded border border-border bg-background/60 p-2 text-[10px] leading-tight text-muted-foreground">
                 {sources.sql}
               </pre>
               {sources.documentHints && sources.documentHints.length > 0 && (
-                <ul className="list-inside list-disc text-xs text-slate-500">
+                <ul className="list-inside list-disc text-xs text-muted-foreground">
                   {sources.documentHints.map((d) => (
                     <li key={d}>{d}</li>
                   ))}

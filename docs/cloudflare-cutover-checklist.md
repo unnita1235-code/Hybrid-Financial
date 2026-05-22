@@ -30,6 +30,7 @@ This checklist is used when moving from legacy Netlify/Render hosting to Cloudfl
   - Frontend lint + typecheck + build
   - Worker typecheck + tests
   - Backend Python tests
+  - AI golden intent eval (`npm run eval:golden`)
 - Merge to `develop` for preview validation.
 - Merge to `main` for production deployment.
 
@@ -41,6 +42,7 @@ This checklist is used when moving from legacy Netlify/Render hosting to Cloudfl
 - Validate:
   - `/`, `/research`, `/alerts`, `/debate`, `/portfolio`
   - `${BACKEND_URL}/health`
+  - Golden intent schema contract from `testing_suite/golden_intents.json`
 
 ## 4) Rollback
 
@@ -50,3 +52,27 @@ This checklist is used when moving from legacy Netlify/Render hosting to Cloudfl
   - Cloudflare Workers -> Versions -> rollback to previous stable version.
 - Temporary emergency bridge:
   - Re-enable `UPSTREAM_API_BASE` to send critical API traffic to legacy backend while issues are fixed.
+
+## 5) Ownership and approvals
+
+- Release approver (`main`):
+  - Assign one owner to approve production merges and monitor deploy result.
+- Rollback owner:
+  - Assign one owner with Cloudflare Pages + Workers rollback permissions.
+- Monitoring owner:
+  - Assign one owner to watch deployment failures, runtime errors, and smoke-check artifacts.
+- AI quality owner:
+  - Assign one owner to maintain `docs/ai-launch-contract.md` and golden intent thresholds.
+- Incident response owner:
+  - Assign one owner to maintain `docs/incident-response-playbook.md`.
+- Branch protections:
+  - `main`: require PR review + required status checks before merge.
+  - `develop`: require core CI checks before merge.
+
+## 6) Sign-off artifacts
+
+- Maintain release sign-off packet:
+  - `docs/release-signoff-packet.md`
+- Attach evidence from:
+  - deploy smoke artifacts
+  - AI eval artifact `artifacts/ai-eval/golden-intents-status.json`

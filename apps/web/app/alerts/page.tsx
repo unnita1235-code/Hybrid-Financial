@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { PageTemplate } from "@/components/layout/page-template";
 
 type AlertItem = {
   id: string;
@@ -104,18 +105,19 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100">Unread alerts</h1>
+    <PageTemplate
+      title="Unread alerts"
+      subtitle={`${unread.length} unread items`}
+      maxWidthClassName="max-w-5xl"
+      actions={
         <button
           onClick={() => void loadAlerts()}
-          className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100"
+          className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground"
         >
           Refresh
         </button>
-      </div>
-
-      <p className="mb-4 text-xs text-slate-500">{unread.length} unread items</p>
+      }
+    >
 
       {error && (
         <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -124,11 +126,11 @@ export default function AlertsPage() {
       )}
 
       {loading ? (
-        <div className="glass-terminal rounded-xl p-4 text-sm text-slate-500">
+        <div className="neon-card rounded-xl p-4 text-sm text-muted-foreground">
           Loading alerts...
         </div>
       ) : unread.length === 0 ? (
-        <div className="glass-terminal rounded-xl p-4 text-sm text-slate-500">
+        <div className="neon-card rounded-xl p-4 text-sm text-muted-foreground">
           No unread alerts.
         </div>
       ) : (
@@ -137,26 +139,26 @@ export default function AlertsPage() {
             const triage = triageById[alert.id];
             const bodyExcerpt = (alert.body || "").slice(0, 200);
             return (
-              <article key={alert.id} className="glass-terminal rounded-xl p-4">
+              <article key={alert.id} className="neon-card neon-hover rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-medium text-slate-100">
+                  <h2 className="text-base font-semibold text-foreground">
                     {alert.title || "Untitled alert"}
                   </h2>
                   <div className="flex items-center gap-2 text-[11px]">
-                    <span className="rounded border border-white/10 bg-zinc-900 px-2 py-0.5 text-slate-300">
+                    <span className="rounded border border-border bg-background/70 px-2 py-0.5 text-foreground/85">
                       z-score:{" "}
                       {alert.z_score == null ? "n/a" : Number(alert.z_score).toFixed(2)}
                     </span>
-                    <span className="text-slate-500">{timeAgo(alert.created_at)}</span>
+                    <span className="text-muted-foreground">{timeAgo(alert.created_at)}</span>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-slate-300">{bodyExcerpt}</p>
+                <p className="mt-2 text-base leading-6 text-foreground/90">{bodyExcerpt}</p>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => void runTriage(alert.id)}
                     disabled={!!busyTriage[alert.id]}
-                    className="rounded-md border border-white/20 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:brightness-110 hover:shadow-[0_0_18px_hsl(var(--neon-cyan)/0.45)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busyTriage[alert.id] ? "Triaging..." : "Triage"}
                   </button>
@@ -164,21 +166,21 @@ export default function AlertsPage() {
                     onClick={() =>
                       setExpandedById((p) => ({ ...p, [alert.id]: !p[alert.id] }))
                     }
-                    className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100"
+                    className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground"
                   >
                     {expandedById[alert.id] ? "Hide details" : "Why triggered"}
                   </button>
                   <button
                     onClick={() => void markRead(alert.id)}
                     disabled={!!busyRead[alert.id]}
-                    className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busyRead[alert.id] ? "Marking..." : "Mark as read"}
                   </button>
                 </div>
 
                 {triage && (
-                  <div className="mt-3 rounded-lg border border-white/10 bg-zinc-900/40 p-3">
+                  <div className="mt-3 rounded-lg border border-border bg-background/65 p-3">
                     <span
                       className={cn(
                         "inline-flex rounded border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
@@ -187,14 +189,14 @@ export default function AlertsPage() {
                     >
                       {triage.severity}
                     </span>
-                    <p className="mt-2 text-sm text-slate-200">{triage.summary}</p>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-2 text-base leading-6 text-foreground/90">{triage.summary}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Suggested action: {triage.suggested_action}
                     </p>
                     {(triage.key_catalysts?.length ?? 0) > 0 && (
                       <div className="mt-2">
-                        <p className="text-xs text-slate-500">Key catalysts</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-300">
+                        <p className="text-xs text-muted-foreground">Key catalysts</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-foreground/85">
                           {(triage.key_catalysts ?? []).map((k) => (
                             <li key={k}>{k}</li>
                           ))}
@@ -204,23 +206,23 @@ export default function AlertsPage() {
                   </div>
                 )}
                 {expandedById[alert.id] && (
-                  <div className="mt-3 rounded-lg border border-white/10 bg-zinc-900/30 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                  <div className="mt-3 rounded-lg border border-border bg-background/60 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
                       Explainability
                     </p>
-                    <p className="mt-1 text-sm text-slate-300">
+                    <p className="mt-1 text-base leading-6 text-foreground/90">
                       This alert is generated by anomaly monitoring over market and
                       portfolio signals. The z-score indicates deviation magnitude from
                       baseline behavior.
                     </p>
                     <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Confidence</span>
                         <span>
                           {(confidenceFromZ(alert.z_score) * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <div className="mt-1 h-2 overflow-hidden rounded-full border border-white/10 bg-zinc-900">
+                      <div className="mt-1 h-2 overflow-hidden rounded-full border border-border bg-muted">
                         <div
                           className="h-full bg-cyan-400/80"
                           style={{ width: `${confidenceFromZ(alert.z_score) * 100}%` }}
@@ -228,13 +230,13 @@ export default function AlertsPage() {
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
+                      <button className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:border-ring hover:text-foreground">
                         Triage now
                       </button>
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
+                      <button className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:border-ring hover:text-foreground">
                         Create task
                       </button>
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
+                      <button className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:border-ring hover:text-foreground">
                         Dismiss risk
                       </button>
                     </div>
@@ -245,6 +247,6 @@ export default function AlertsPage() {
           })}
         </div>
       )}
-    </div>
+    </PageTemplate>
   );
 }
