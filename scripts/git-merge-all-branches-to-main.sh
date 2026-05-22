@@ -181,6 +181,7 @@ list_branches_to_process() {
       local short="${rb#${REMOTE_NAME}/}"
       [[ "$short" == "$MAIN_BRANCH" ]] && continue
       is_backup_branch "$short" && continue
+      should_exclude_branch "$short" && continue
       if ! git show-ref --verify --quiet "refs/heads/${short}" 2>/dev/null; then
         log "Creating local tracking branch for ${REMOTE_NAME}/${short}"
         if [[ "$DRY_RUN" == true ]]; then
