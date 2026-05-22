@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "description": "Golden API intent contracts for deploy/CI gates (schema-only; no live HTTP).",
+  "intents": [
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/health",
+      "runtime": "worker",
+      "response": {
+        "required": ["status", "runtime", "timestamp"]
+      }
+    },
+    {
+      "id": "alerts_count",
+      "method": "GET",
+      "path": "/v1/alerts/count",
+      "runtime": "worker",
+      "response": {
+        "required": ["unread"]
+      }
+    },
+    {
+      "id": "alerts_list",
+      "method": "GET",
+      "path": "/v1/alerts",
+      "runtime": "worker",
+      "response": {
+        "required": []
+      }
+    },
+    {
+      "id": "debate_risk_assessment",
+      "method": "POST",
+      "path": "/v1/debate/risk-assessment",
+      "runtime": "worker",
+      "request": {
+        "optional": ["metric"]
+      },
+      "response": {
+        "required": [
+          "metric",
+          "conviction",
+          "e_bull",
+          "e_bear",
+          "judge_synthesis",
+          "bull_argument",
+          "bear_argument"
+        ]
+      }
+    },
+    {
+      "id": "portfolio_summary",
+      "method": "GET",
+      "path": "/v1/portfolio/summary",
+      "runtime": "worker",
+      "response": {
+        "required": ["total_value", "pnl_24h", "positions", "status"]
+      }
+    },
+    {
+      "id": "insight_stream",
+      "method": "POST",
+      "path": "/v1/insight/stream",
+      "runtime": "upstream",
+      "request": {
+        "required": ["query"]
+      },
+      "response": {
+        "sse_events": ["token", "sql", "rag", "done", "error"]
+      }
+    },
+    {
+      "id": "research_stream",
+      "method": "POST",
+      "path": "/v1/research/stream",
+      "runtime": "upstream",
+      "request": {
+        "required": ["query"]
+      },
+      "response": {
+        "sse_events": ["token", "sources", "done", "error"]
+      }
+    },
+    {
+      "id": "temporal_ws",
+      "method": "GET",
+      "path": "/v1/temporal/ws",
+      "runtime": "upstream",
+      "response": {
+        "protocol": "websocket"
+      }
+    },
+    {
+      "id": "audit_feedback",
+      "method": "POST",
+      "path": "/v1/audit/feedback",
+      "runtime": "upstream",
+      "request": {
+        "required": ["audit_log_id", "rating"]
+      },
+      "response": {
+        "required": []
+      }
+    }
+  ]
+}
