@@ -127,10 +127,33 @@ class SupabaseRagConfig:
     supabase_key: str
     # Postgres RPC: (query_embedding, match_count, source_filter) -> setof document rows
     match_rpc: str = "match_rag_chunks"
+    fts_rpc: str = "match_rag_chunks_fts"
+    rrf_k: int = 60
     # Metadata keys used to mark transcript vs. SEC — optional filter
     default_match_count: int = 8
     # Optional: restrict to subpaths of `source` (e.g. "transcript/", "filing/")
     source_prefixes: list[str] | None = field(default=None)
+
+
+def merge_rrf(
+    results_a: list[dict],
+    results_b: list[dict],
+    k: int = 60,
+    id_key: str = "id",
+) -> list[dict]:
+    """Reciprocal Rank Fusion merge. Pure function, no I/O."""
+    scores: dict[str, float] = {}
+    items: dict[str, dict] = {}
+    for rank, item in enumerate(results_a, start=1):
+        key = str(item[id_key])
+        scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank)
+        items[key] = item
+    for rank, item in enumerate(results_b, start=1):
+        key = str(item[id_key])
+        scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank)
+        items[key] = item
+    ranked = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+    return [items[key] for key in ranked]
 
 
 @dataclass
@@ -215,6 +238,55 @@ class SupabaseRagRetriever:
         if isinstance(data, dict):
             return [dict(data)]
         return []
+
+    async def retrieve_hybrid(
+        self,
+        query: str,
+        query_embedding: list[float],
+        match_count: int | None = None,
+        *,
+        metadata_time_start: str | None = None,
+        metadata_time_end: str | None = None,
+    ) -> list[dict[str, Any]]:
+        n = match_count or self.config.default_match_count
+        
+        vector_results = await self.retrieve(
+            query_embedding=query_embedding,
+            match_count=n,
+            metadata_time_start=metadata_time_start,
+            metadata_time_end=metadata_time_end,
+        )
+        
+        fts_body: dict[str, Any] = {
+            "fts_query": query,
+            "match_count": n,
+        }
+        if self.config.source_prefixes is not None:
+            fts_body["source_filter"] = self.config.source_prefixes
+            
+        fts_results = []
+        try:
+            base = self.config.supabase_url.rstrip("/")
+            fts_url = f"{base}/rest/v1/rpc/{self.config.fts_rpc}"
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                r = await client.post(
+                    fts_url,
+                    headers=self._rest_headers(),
+                    json=fts_body,
+                )
+            r.raise_for_status()
+            data = r.json()
+            if data:
+                if isinstance(data, list):
+                    fts_results = [dict(x) for x in data]
+                elif isinstance(data, dict):
+                    fts_results = [dict(data)]
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("FTS search failed: %s", exc)
+            return vector_results
+            
+        return merge_rrf(vector_results, fts_results, k=self.config.rrf_k)
 
 
 # ---------------------------------------------------------------------------

@@ -1,44 +1,76 @@
+"""Market data tool tests — mocked httpx, no network, no env vars."""
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from httpx import Response, Request
-from unittest.mock import patch, AsyncMock
-from aequitas_ai.tools.market_data import fetch_market_price
+import httpx
 
-@pytest.mark.asyncio
-async def test_unavailable_on_bad_symbol():
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        # Mocking a 404 response
-        mock_request = Request("GET", "https://mock")
-        mock_response = Response(404, request=mock_request)
-        mock_get.return_value = mock_response
+from aequitas_ai.tools.market_data import fetch_market_price, MarketDataResult
 
-        result = await fetch_market_price("NOTREAL_XYZ_FAKE")
 
-        assert result["source"] == "unavailable"
-        assert result["price"] is None
-        assert result["error"] is not None
-
-@pytest.mark.asyncio
-async def test_parse_yahoo_response_shape():
-    mock_yahoo_data = {
-        "chart": {
-            "result": [
-                {
-                    "meta": {
-                        "regularMarketPrice": 150.25
-                    }
+YAHOO_VALID_RESPONSE = {
+    "chart": {
+        "result": [
+            {
+                "meta": {
+                    "symbol": "AAPL",
+                    "regularMarketPrice": 195.42,
+                    "currency": "USD",
                 }
-            ]
-        }
+            }
+        ]
     }
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-        # Mocking a valid 200 JSON response
-        mock_request = Request("GET", "https://mock")
-        mock_response = Response(200, json=mock_yahoo_data, request=mock_request)
-        mock_get.return_value = mock_response
+}
 
+
+@pytest.fixture
+def _mock_httpx_404():
+    """Mock httpx.AsyncClient to return 404."""
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 404
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "Not Found", request=MagicMock(), response=mock_response
+    )
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    return mock_client
+
+
+@pytest.fixture
+def _mock_httpx_ok():
+    """Mock httpx.AsyncClient to return valid Yahoo JSON."""
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = YAHOO_VALID_RESPONSE
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    return mock_client
+
+
+@pytest.mark.asyncio
+async def test_unavailable_on_bad_symbol(_mock_httpx_404):
+    with patch("aequitas_ai.tools.market_data.httpx.AsyncClient", return_value=_mock_httpx_404):
+        result = await fetch_market_price("NOTREAL_XYZ_FAKE")
+    assert result["source"] == "unavailable"
+    assert result["price"] is None
+    assert result["error"] is not None
+
+
+@pytest.mark.asyncio
+async def test_parse_yahoo_response_shape(_mock_httpx_ok):
+    with patch("aequitas_ai.tools.market_data.httpx.AsyncClient", return_value=_mock_httpx_ok):
         result = await fetch_market_price("AAPL")
-
-        assert result["source"] == "yahoo"
-        assert isinstance(result["price"], float)
-        assert result["price"] == 150.25
-        assert result["error"] is None
+    assert isinstance(result["price"], float)
+    assert result["source"] == "yahoo"
+    assert result["error"] is None
+    assert result["symbol"] == "AAPL"

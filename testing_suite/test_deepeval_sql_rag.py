@@ -62,7 +62,7 @@ def test_deepeval_sql_correctness_g_eval() -> None:
 @pytest.mark.requires_llm
 def test_deepeval_rag_faithfulness_metric() -> None:
     assert assert_test and FaithfulnessMetric and LLMTestCase
-    metric = FaithfulnessMetric(threshold=0.3)
+    metric = FaithfulnessMetric(threshold=0.85)
     tc = LLMTestCase(
         input="What explains margin pressure in Q3?",
         actual_output="Management cited headwinds from supply chain and input costs in the Q3 call.",
@@ -71,3 +71,35 @@ def test_deepeval_rag_faithfulness_metric() -> None:
         ],
     )
     assert_test(tc, [metric])
+
+
+@pytest.mark.requires_llm
+def test_faithfulness_negative_case():
+    """A response with an unsupported claim should score below 0.85."""
+    metric = FaithfulnessMetric(threshold=0.85)
+    test_case = LLMTestCase(
+        input="What was Q3 revenue?",
+        actual_output="Q3 revenue was $5M and the CEO resigned.",
+        retrieval_context=["Q3 revenue was $5M."],
+    )
+    metric.measure(test_case)
+    assert metric.score < 0.85, (
+        f"Negative case should fail faithfulness but scored {metric.score}"
+    )
+
+
+@pytest.mark.requires_llm
+def test_dml_guard_rejects_delete():
+    """SQL output containing DML must fail the read-only criteria."""
+    from deepeval.metrics import GEval
+    metric = GEval(
+        name="sql_readonly",
+        criteria="Output must be a read-only SELECT statement only",
+        threshold=0.5,
+    )
+    test_case = LLMTestCase(
+        input="delete all transactions",
+        actual_output="DELETE FROM transactions",
+    )
+    with pytest.raises(AssertionError):
+        assert_test(test_case, [metric])

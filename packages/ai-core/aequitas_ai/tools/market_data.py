@@ -1,16 +1,14 @@
-"""Market data tool node implementation."""
-
+"""Market data tool — DB-first with Yahoo Finance fallback."""
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Literal, TypedDict, Any
+from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 import httpx
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing_extensions import TypedDict
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class MarketDataResult(TypedDict):
@@ -23,92 +21,80 @@ class MarketDataResult(TypedDict):
 
 async def fetch_market_price(
     symbol: str,
-    session: AsyncSession | None = None,
+    session=None,  # AsyncSession | None — import guarded to avoid hard dep
 ) -> MarketDataResult:
-    symbol = symbol.upper()
-    
-    # Layer 1 (DB-first)
+    """Fetch price: try DB first, then Yahoo Finance, never raise."""
+    symbol = symbol.strip().upper()
+
+    # Layer 1 — DB lookup (if session provided)
     if session is not None:
         try:
-            stmt = text(
-                "SELECT value, as_of_utc FROM market_data "
-                "WHERE code = :symbol ORDER BY as_of_utc DESC LIMIT 1"
-            )
-            result = await session.execute(stmt, {"symbol": symbol})
-            row = result.fetchone()
-            
-            if row:
-                value = row.value
-                as_of_utc = row.as_of_utc
-                # Depending on driver, as_of_utc might be datetime or string
-                if isinstance(as_of_utc, str):
-                    try:
-                        as_of_utc_dt = datetime.fromisoformat(as_of_utc.replace("Z", "+00:00"))
-                    except ValueError:
-                        as_of_utc_dt = None
-                else:
-                    as_of_utc_dt = as_of_utc
-                
-                if as_of_utc_dt is not None:
-                    # Ensure timezone awareness
-                    if as_of_utc_dt.tzinfo is None:
-                        as_of_utc_dt = as_of_utc_dt.replace(tzinfo=timezone.utc)
-                    
-                    if datetime.now(timezone.utc) - as_of_utc_dt <= timedelta(hours=24):
-                        return {
-                            "symbol": symbol,
-                            "price": float(value),
-                            "source": "db",
-                            "as_of_utc": as_of_utc_dt.isoformat(),
-                            "error": None
-                        }
-        except Exception as e:
-            logger.warning(f"Error querying DB for {symbol}: {e}")
-            # Fall through to Layer 2
+            from sqlalchemy import text as sa_text
 
-    # Layer 2 (Yahoo Finance fallback)
+            row = (
+                await session.execute(
+                    sa_text(
+                        "SELECT value, as_of_utc FROM market_data "
+                        "WHERE code = :symbol ORDER BY as_of_utc DESC LIMIT 1"
+                    ),
+                    {"symbol": symbol},
+                )
+            ).first()
+            if row is not None:
+                as_of = row[1]
+                if isinstance(as_of, datetime) and (
+                    datetime.now(timezone.utc) - as_of.replace(tzinfo=timezone.utc)
+                ) < timedelta(hours=24):
+                    return MarketDataResult(
+                        symbol=symbol,
+                        price=float(row[0]),
+                        source="db",
+                        as_of_utc=as_of.isoformat(),
+                        error=None,
+                    )
+        except Exception as exc:
+            log.warning("DB lookup failed for %s: %s", symbol, exc)
+
+    # Layer 2 — Yahoo Finance (no API key required)
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-        params = {"interval": "1d", "range": "1d"}
-        
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, params=params, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
-            
-            result_list = data.get("chart", {}).get("result", [])
+            resp = await client.get(
+                url, params={"interval": "1d", "range": "1d"}, timeout=10.0
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            result_list = data.get("chart", {}).get("result")
             if not result_list:
-                return {
-                    "symbol": symbol,
-                    "price": None,
-                    "source": "unavailable",
-                    "as_of_utc": None,
-                    "error": "No result found in Yahoo Finance response"
-                }
-                
-            regular_market_price = result_list[0].get("meta", {}).get("regularMarketPrice")
-            if regular_market_price is None:
-                return {
-                    "symbol": symbol,
-                    "price": None,
-                    "source": "unavailable",
-                    "as_of_utc": None,
-                    "error": "regularMarketPrice not found in Yahoo Finance response"
-                }
-                
-            return {
-                "symbol": symbol,
-                "price": float(regular_market_price),
-                "source": "yahoo",
-                "as_of_utc": datetime.now(timezone.utc).isoformat(),
-                "error": None
-            }
-            
-    except Exception as e:
-        return {
-            "symbol": symbol,
-            "price": None,
-            "source": "unavailable",
-            "as_of_utc": None,
-            "error": str(e)
-        }
+                return MarketDataResult(
+                    symbol=symbol,
+                    price=None,
+                    source="unavailable",
+                    as_of_utc=None,
+                    error="No result in Yahoo response",
+                )
+            price = result_list[0].get("meta", {}).get("regularMarketPrice")
+            if price is None:
+                return MarketDataResult(
+                    symbol=symbol,
+                    price=None,
+                    source="unavailable",
+                    as_of_utc=None,
+                    error="regularMarketPrice not found in Yahoo response",
+                )
+            return MarketDataResult(
+                symbol=symbol,
+                price=float(price),
+                source="yahoo",
+                as_of_utc=datetime.now(timezone.utc).isoformat(),
+                error=None,
+            )
+    except Exception as exc:
+        log.warning("Yahoo Finance lookup failed for %s: %s", symbol, exc)
+        return MarketDataResult(
+            symbol=symbol,
+            price=None,
+            source="unavailable",
+            as_of_utc=None,
+            error=str(exc),
+        )

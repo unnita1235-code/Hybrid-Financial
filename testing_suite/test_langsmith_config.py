@@ -3,8 +3,10 @@ import sys
 import pytest
 from types import SimpleNamespace
 
-# Ensure the apps directory is in the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../apps/server')))
+# Add the server app directory to sys.path so `from app.main import ...` works
+_server_dir = os.path.join(os.path.dirname(__file__), "..", "apps", "server")
+if _server_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_server_dir))
 
 from app.main import configure_langsmith
 
