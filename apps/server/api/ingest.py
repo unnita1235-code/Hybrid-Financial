@@ -12,18 +12,18 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Literal, cast
 
 import httpx
+from aequitas_database.models.document_embedding import EMBEDDING_DIM, DocumentEmbedding
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from aequitas_database.models.document_embedding import EMBEDDING_DIM, DocumentEmbedding
 from app.config import settings
 
 log = logging.getLogger(__name__)
@@ -358,7 +358,7 @@ async def _embed_texts(texts: list[str]) -> list[list[float]]:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 async def _upsert_postgres(

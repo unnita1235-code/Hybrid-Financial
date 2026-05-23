@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageTemplate } from "@/components/layout/page-template";
 
 type PortfolioSummary = {
   positions: number;
@@ -33,42 +32,42 @@ export default function PortfolioPage() {
   }, []);
 
   return (
-    <PageTemplate
-      title="Portfolio tracker"
-      subtitle="Monitor positions and run portfolio-level analysis."
-      maxWidthClassName="max-w-5xl"
-    >
+    <div className="mx-auto w-full max-w-5xl px-4 py-6">
+      <h1 className="text-lg font-semibold text-slate-100">Portfolio tracker</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Monitor positions and run portfolio-level analysis.
+      </p>
       {error && (
         <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
           {error}
         </div>
       )}
-      <div className="neon-card neon-hover mt-4 rounded-xl p-6 text-base leading-6 text-foreground/90">
+      <div className="mt-4 glass-terminal rounded-xl p-4 text-sm text-slate-300">
         {summary ? (
-          <dl className="grid gap-4 sm:grid-cols-2">
+          <dl className="grid gap-2 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-muted-foreground">Positions</dt>
-              <dd className="mt-1 font-numeric text-2xl tabular-nums text-foreground">{summary.positions}</dd>
+              <dt className="text-xs text-slate-500">Positions</dt>
+              <dd>{summary.positions}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">Market value</dt>
-              <dd className="mt-1 font-numeric text-2xl tabular-nums text-foreground">{summary.market_value}</dd>
+              <dt className="text-xs text-slate-500">Market value</dt>
+              <dd>{summary.market_value}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">Cost basis</dt>
-              <dd className="mt-1 font-numeric text-2xl tabular-nums text-foreground">{summary.cost_basis}</dd>
+              <dt className="text-xs text-slate-500">Cost basis</dt>
+              <dd>{summary.cost_basis}</dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">Unrealized P/L</dt>
-              <dd className="mt-1 font-numeric text-2xl tabular-nums text-foreground">{summary.unrealized_pnl}</dd>
+              <dt className="text-xs text-slate-500">Unrealized P/L</dt>
+              <dd>{summary.unrealized_pnl}</dd>
             </div>
           </dl>
         ) : (
-          <p className="text-base text-muted-foreground">
+          <p>
             Portfolio summary will appear here once the backend endpoint is available.
           </p>
         )}
       </div>
-    </PageTemplate>
+    </div>
   );
 }

@@ -37,6 +37,7 @@ if not os.getenv("OPENAI_API_KEY"):
     )
 
 
+@pytest.mark.requires_llm
 def test_deepeval_sql_correctness_g_eval() -> None:
     assert assert_test and GEval and LLMTestCase and LLMTestCaseParams
     m = GEval(
@@ -58,6 +59,7 @@ def test_deepeval_sql_correctness_g_eval() -> None:
     assert_test(tc, [m])
 
 
+@pytest.mark.requires_llm
 def test_deepeval_rag_faithfulness_metric() -> None:
     assert assert_test and FaithfulnessMetric and LLMTestCase
     metric = FaithfulnessMetric(threshold=0.3)

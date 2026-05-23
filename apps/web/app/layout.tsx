@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { AlertBadge } from "@/components/alerts/alert-badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter-sans",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -29,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
       >
         <Providers>
           <div className="flex min-h-screen flex-col bg-background">
@@ -38,7 +43,7 @@ export default function RootLayout({
                 <div className="flex items-center gap-4">
                   <Link
                     href="/"
-                    className="font-mono text-xs uppercase tracking-[0.2em] neon-gradient-text"
+                    className="font-mono text-xs uppercase tracking-[0.18em] text-foreground"
                   >
                     Aequitas FI
                   </Link>

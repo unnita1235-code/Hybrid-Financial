@@ -150,8 +150,8 @@ export default function ResearchPage() {
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-7xl animate-fade-in-up gap-5 px-4 py-6 lg:grid-cols-[1.1fr_1.5fr_1fr]">
-      <section className="neon-card neon-hover rounded-xl p-4 sm:p-5">
+    <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-6 lg:grid-cols-[1.1fr_1.5fr_1fr]">
+      <section className="glass-terminal rounded-xl p-4 sm:p-5">
         <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
           Deep research workspace
         </p>
@@ -163,13 +163,13 @@ export default function ResearchPage() {
             minLength={10}
             maxLength={2000}
             placeholder="Enter a research question requiring SQL + document evidence synthesis..."
-            className="min-h-[220px] w-full resize-y rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-1 focus:ring-primary/40"
+            className="min-h-[220px] w-full resize-y rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground outline-none transition focus:border-ring focus:ring-1 focus:ring-ring/40"
           />
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="submit"
               disabled={!canRun}
-              className="rounded-md border border-primary bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:brightness-110 hover:shadow-[0_0_18px_hsl(var(--neon-cyan)/0.45)] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md border border-primary bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isRunning ? "Running..." : "Run Research"}
             </button>
@@ -218,12 +218,12 @@ export default function ResearchPage() {
         </form>
       </section>
 
-      <section className="neon-card rounded-xl p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-base text-foreground/90">
+      <section className="glass-terminal rounded-xl p-4 sm:p-5">
+        <div className="flex items-center gap-2 text-sm text-slate-200">
           {isRunning ? (
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <Loader2 className="h-4 w-4 animate-spin text-slate-300" />
           ) : (
-            <span className="live-pulse inline-block h-2 w-2 rounded-full bg-primary" />
+            <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
           )}
           <span>{statusText || "Planning questions..."}</span>
         </div>
@@ -253,7 +253,7 @@ export default function ResearchPage() {
                       ✓ ({q.ragHits ?? 0} RAG hits)
                     </span>
                   ) : (
-                    <span className="text-xs text-muted-foreground">running...</span>
+                    <span className="text-xs text-slate-500">running...</span>
                   )}
                 </div>
               </li>
@@ -331,7 +331,7 @@ export default function ResearchPage() {
         )}
       </section>
 
-      <aside className="neon-card rounded-xl p-4 sm:p-5">
+      <aside className="glass-terminal rounded-xl p-4 sm:p-5">
         <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
           Evidence and history
         </p>

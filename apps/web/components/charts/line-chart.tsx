@@ -14,14 +14,14 @@ type LineChartProps = {
 
 export function LineChart({ data, className }: LineChartProps) {
   return (
-    <div className={`neon-hover ${className ?? ""}`}>
+    <div className={className}>
       <ResponsiveContainer width="100%" height={120}>
         <RechartsLineChart data={data}>
           <Line
             type="monotone"
             dataKey="y"
-            stroke="hsl(var(--neon-cyan))"
-            strokeWidth={2.5}
+            stroke="currentColor"
+            strokeWidth={2}
             dot={false}
           />
         </RechartsLineChart>

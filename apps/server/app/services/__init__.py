@@ -2,9 +2,9 @@
 
 from app.services.shadow_analyst import (
     MKT_Z_SQL,
-    ShadowAnalystService,
-    Z_SCORE_SQL,
     Z_SCORE_LIMIT,
+    Z_SCORE_SQL,
+    ShadowAnalystService,
 )
 
 __all__ = [

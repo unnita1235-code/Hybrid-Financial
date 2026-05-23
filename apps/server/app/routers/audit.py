@@ -48,7 +48,6 @@ async def open_audit_session(request: Request, body: SessionCreateBody) -> Sessi
     ident = await get_identity(request)
     if body.generated_sql is not None:
         assert_sql_rbac(body.generated_sql, ident.role)
-    from app.config import settings
 
     prompt_text = (body.prompt_template or INSIGHT_DEMO_PROMPT_ID).strip()
     if prompt_text == INSIGHT_DEMO_PROMPT_ID:

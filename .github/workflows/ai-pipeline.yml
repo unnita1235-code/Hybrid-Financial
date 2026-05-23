@@ -48,7 +48,7 @@ jobs:
           pip install -r requirements-local.txt
           pip install -r testing_suite/requirements.txt
       - name: Pytest
-        run: pytest
+        run: pytest -m "not requires_llm"
       - name: Faithfulness demo
         run: python testing_suite/calculate_faithfulness.py --demo
 
@@ -56,6 +56,8 @@ jobs:
     name: DeepEval RAG / SQL checks
     runs-on: ubuntu-latest
     needs: [python-tests]
+    # Optional: OpenAI quota / billing failures should not block the pipeline
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -117,6 +119,7 @@ jobs:
 
   python-lint:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

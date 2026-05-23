@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from aequitas_database.models.audit_log import AuditLog, HumanFeedback
+from sqlalchemy import select, update
+
 from app.db import get_session_maker
 
 
@@ -32,7 +31,7 @@ async def create_session(
 ) -> uuid.UUID:
     sm = get_session_maker()
     log_id = uuid.uuid4()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with sm() as session:
         row = AuditLog(
             id=log_id,
@@ -62,7 +61,7 @@ async def complete_session(
     model_versions: dict[str, str] | None,
 ) -> None:
     sm = get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     mv = {**default_model_versions(), **(model_versions or {})}
     async with sm() as session:
         await session.execute(

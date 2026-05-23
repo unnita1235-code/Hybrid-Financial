@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -74,7 +74,7 @@ class PortfolioOut(BaseModel):
     updated_at: str | None
 
     @classmethod
-    def from_row(cls, row) -> "PortfolioOut":
+    def from_row(cls, row) -> PortfolioOut:
         return cls(
             id=row.id,
             user_id=row.user_id,
@@ -105,7 +105,7 @@ class PositionOut(BaseModel):
     created_at: str
 
     @classmethod
-    def from_row(cls, row) -> "PositionOut":
+    def from_row(cls, row) -> PositionOut:
         return cls(
             id=row.id,
             portfolio_id=row.portfolio_id,
@@ -188,13 +188,13 @@ async def list_positions(
     return [PositionOut.from_row(r) for r in rows]
 
 
-@router.delete("/{portfolio_id}/positions/{position_id}")
+@router.delete("/{portfolio_id}/positions/{position_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_position(
     request: Request,
     portfolio_id: UUID,
     position_id: UUID,
     session: AsyncSession = Depends(_get_session),
-) -> Response:
+) -> None:
     ident = await get_identity(request)
     user_id = _parse_user_id_or_400(ident.sub)
     portfolio = await portfolio_svc.get_portfolio(session, portfolio_id, user_id)
@@ -203,7 +203,6 @@ async def delete_position(
     deleted = await portfolio_svc.delete_position(session, position_id, portfolio_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Position not found")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{portfolio_id}/pnl")

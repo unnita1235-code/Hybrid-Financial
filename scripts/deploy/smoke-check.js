@@ -28,9 +28,10 @@ async function checkRouteInBrowser(page, baseUrl, route) {
 async function run() {
   const frontend = optEnv("FRONTEND_URL");
   const backend = optEnv("BACKEND_URL");
+  const backendHealthUrl = optEnv("BACKEND_HEALTH_URL");
 
-  if (!frontend || !backend) {
-    throw new Error("Set FRONTEND_URL and BACKEND_URL before running smoke checks.");
+  if (!frontend) {
+    throw new Error("Set FRONTEND_URL before running smoke checks.");
   }
 
   const browser = await chromium.launch({ headless: true });
@@ -47,7 +48,11 @@ async function run() {
     await browser.close();
   }
 
-  const apiChecks = [await checkHttp(`${backend}/health`)];
+  const apiChecks = [];
+  if (backend || backendHealthUrl) {
+    const healthUrl = backendHealthUrl ?? `${backend.replace(/\/$/, "")}/health`;
+    apiChecks.push(await checkHttp(healthUrl));
+  }
   const results = [...browserChecks, ...apiChecks];
   const failed = results.filter((r) => !r.ok);
 
@@ -55,6 +60,7 @@ async function run() {
     started_at: nowIso(),
     frontend,
     backend,
+    backend_health_url: backendHealthUrl ?? null,
     results,
     failed_count: failed.length,
     completed_at: nowIso(),

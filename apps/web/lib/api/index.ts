@@ -8,8 +8,6 @@ export type ApiRequestInit = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
-  /** When true, treat 204 No Content as success and return undefined (no JSON parse). */
-  noContent?: boolean;
 };
 
 export async function apiRequest<T>(
@@ -29,14 +27,7 @@ export async function apiRequest<T>(
     const message = await response.text();
     throw new Error(message || `API request failed (${response.status})`);
   }
-  if (init.noContent || response.status === 204) {
-    return undefined as T;
-  }
-  const text = await response.text();
-  if (!text) {
-    return undefined as T;
-  }
-  return JSON.parse(text) as T;
+  return (await response.json()) as T;
 }
 
 export async function streamInsight(

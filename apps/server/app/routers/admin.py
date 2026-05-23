@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -104,7 +104,7 @@ async def _ingest_stream(file: UploadFile, source_label: str) -> AsyncIterator[s
             }
         )
 
-        ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        ts = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         items: list[tuple[Any, str, str, list[float], dict[str, Any]]] = []
         for c, emb in zip(chunks, vectors, strict=True):
             row_id = _chunk_uuid(f"{c.source_label}|", c.page_number, c.chunk_index)
