@@ -95,6 +95,7 @@ def test_dml_guard_rejects_delete():
     metric = GEval(
         name="sql_readonly",
         criteria="Output must be a read-only SELECT statement only",
+        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
         threshold=0.5,
     )
     test_case = LLMTestCase(

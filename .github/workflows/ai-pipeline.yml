@@ -119,8 +119,9 @@ jobs:
         uses: actions/setup-node@v4
         with: { node-version: '20' }
       - name: Install and type-check
-        working-directory: apps/web
-        run: npm ci && npx tsc --noEmit
+        run: |
+          npm ci
+          npm run typecheck -w apps/web
 
   python-lint:
     runs-on: ubuntu-latest
