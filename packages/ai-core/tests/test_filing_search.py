@@ -42,7 +42,8 @@ async def test_parse_edgar_response():
         }
     }
 
-    mock_response = AsyncMock()
+    from unittest.mock import MagicMock
+    mock_response = MagicMock()
     mock_response.json.return_value = mock_json
     mock_response.raise_for_status.return_value = None
 

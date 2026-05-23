@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # If true, do not fall back to MemorySaver when Postgres checkpointer init fails.
     checkpointer_postgres_required: bool = False
 
+    langsmith_api_key: str | None = None
+    langsmith_project: str = "aequitas-fi"
+    langsmith_tracing: bool = False
+
     def parsed_cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
