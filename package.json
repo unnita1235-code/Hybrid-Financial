@@ -16,7 +16,6 @@
     "typecheck:web": "npm run typecheck -w @aequitas/web",
     "lint:web": "npm run lint -w @aequitas/web",
     "format:web": "prettier --check \"apps/web/**/*.{ts,tsx,js,json,css,md}\"",
-    "eval:golden": "node testing_suite/eval_golden_intents.js",
     "verify": "python -m pytest testing_suite apps/server/tests packages/ai-core/tests -q --tb=line -m \"not requires_llm\" && python testing_suite/verify_no_api_keys.py && npm run format:web && npm run lint:web && npm run build:web",
     "deploy:bootstrap:vercel": "node scripts/deploy/bootstrap-vercel.js",
     "deploy:bootstrap:railway": "node scripts/deploy/bootstrap-railway.js",

@@ -1,7 +1,7 @@
 from aequitas_ai.agents.state import AequitasGraphState
 from aequitas_ai.agents.alert_agent import AlertAgent, build_alert_agent
 from aequitas_ai.agents.portfolio_agent import PortfolioAgent, build_portfolio_agent
-from aequitas_ai.agents.research_agent import ResearchAgent, build_research_agent
+from aequitas_ai.agents.research_agent import build_research_agent
 from aequitas_ai.agents.temporal_agent import (
     StubTemporalConfig,
     TemporalAgentConfig,
@@ -13,7 +13,6 @@ from aequitas_ai.agents.temporal_agent import (
 
 __all__ = [
     "AequitasGraphState",
-    "ResearchAgent",
     "PortfolioAgent",
     "AlertAgent",
     "StubTemporalConfig",
