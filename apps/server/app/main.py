@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 
@@ -14,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from api.ingest import router as ingest_router
-from app.config import settings
+from app.config import settings, Settings
 from app.graph import (
     GraphRegistry,
     get_alert_triage_graph,
@@ -41,6 +42,17 @@ from middleware.request_id import RequestIdMiddleware
 log = logging.getLogger("aequitas")
 
 
+def configure_langsmith(settings: Settings) -> None:
+    if settings.langsmith_tracing and settings.langsmith_api_key is not None:
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGCHAIN_PROJECT"] = settings.langsmith_project
+        os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+        log.info("LangSmith tracing enabled for project: %s", settings.langsmith_project)
+    else:
+        log.info("LangSmith tracing disabled")
+
+
 def _is_dev_mode() -> bool:
     return (settings.app_env or "dev").strip().lower() in {
         "dev",
@@ -53,6 +65,7 @@ def _is_dev_mode() -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_langsmith(settings)
     if settings.environment in ("staging", "production") and settings.auth_provider == "dev":
         raise RuntimeError(
             f"FATAL: auth_provider='dev' is not allowed in environment='{settings.environment}'. "
