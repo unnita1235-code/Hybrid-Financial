@@ -3,7 +3,7 @@
 
 ## Live Preview
 
-[![Aequitas FI Dashboard](https://image.thum.io/get/width/1280/https://aequitas-web-phi.vercel.app/)](https://aequitas-web-phi.vercel.app/)
+[![Aequitas FI — Live Dashboard](https://api.microlink.io/?url=https://aequitas-web-phi.vercel.app/&screenshot=true&meta=false&embed=screenshot.url)](https://aequitas-web-phi.vercel.app/)
 
 # Aequitas FI
 
