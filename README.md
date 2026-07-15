@@ -1,3 +1,5 @@
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Aequitas%20FI-brightgreen?style=for-the-badge)](https://aequitas-web-phi.vercel.app/) [![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20Next.js%20%7C%20LangGraph-black?style=for-the-badge)](https://github.com/unnita1235-code/Hybrid-Financial)
+
 # Aequitas FI
 
 **Aequitas FI** is a production-oriented **hybrid SQL + RAG** financial dashboard: structured analytics over **Postgres** (compatible with **Supabase**) and **grounded** answers using **pgvector** retrieval, orchestrated with **LangGraph** stateful agents and a **Next.js** front end.
