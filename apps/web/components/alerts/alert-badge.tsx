@@ -39,13 +39,13 @@ export function AlertBadge() {
   return (
     <Link
       href="/alerts"
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-zinc-900/50 text-slate-300 transition hover:border-white/20 hover:text-slate-100"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 bg-card text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
       aria-label="Open alerts"
       title="Alerts"
     >
-      <Bell className="h-4.5 w-4.5" strokeWidth={1.8} />
+      <Bell className="h-5 w-5" strokeWidth={2} />
       {count > 0 && (
-        <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-red-300/20 bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+        <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-destructive/30 bg-destructive px-1 text-xs font-bold leading-none text-destructive-foreground">
           {count > 99 ? "99+" : count}
         </span>
       )}

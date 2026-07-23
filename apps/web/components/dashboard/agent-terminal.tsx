@@ -24,16 +24,16 @@ export function AgentTerminal({ lines, className }: AgentTerminalProps) {
   return (
     <div
       className={cn(
-        "flex max-h-40 min-h-[7rem] shrink-0 flex-col border-t border-white/10 bg-black/80",
+        "flex max-h-40 min-h-[7rem] shrink-0 flex-col border-t border-border/50 bg-card",
         className,
       )}
     >
-      <div className="border-b border-white/5 px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-500">
+      <div className="border-b border-border/30 px-4 py-2 font-sans text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Agent console
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-relaxed">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-sm leading-relaxed">
         {lines.length === 0 ? (
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Run a query to stream node phases (SQL, query, RAG, narrative).
           </p>
         ) : (
@@ -42,7 +42,7 @@ export function AgentTerminal({ lines, className }: AgentTerminalProps) {
               key={line.id}
               className={cn(
                 "whitespace-pre-wrap break-words",
-                line.kind === "error" ? "text-rose-400/90" : "text-emerald-400/90",
+                line.kind === "error" ? "text-destructive" : "text-success",
               )}
             >
               {line.text}

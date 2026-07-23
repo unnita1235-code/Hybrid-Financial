@@ -50,11 +50,11 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-sora)", "system-ui", "sans-serif"],
+        mono: ["var(--font-inter)", "ui-monospace", "monospace"],
         numeric: [
           "var(--font-jetbrains-mono)",
-          "var(--font-geist-mono)",
+          "var(--font-inter)",
           "ui-monospace",
           "monospace",
         ],

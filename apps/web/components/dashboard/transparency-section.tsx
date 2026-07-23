@@ -13,16 +13,16 @@ type Props = {
 };
 
 function ChunkList({ chunks }: { chunks: RagChunkSummary[] }) {
-  if (!chunks.length) return <p className="text-xs text-slate-600">No RAG rows.</p>;
+  if (!chunks.length) return <p className="text-xs text-muted-foreground">No RAG rows.</p>;
   return (
     <ul className="space-y-2">
       {chunks.map((c) => (
         <li
           key={c.id ?? c.source}
-          className="rounded border border-white/10 bg-black/30 p-2 text-[10px] leading-relaxed"
+          className="rounded-lg border border-border/50 bg-card p-3 text-xs leading-relaxed"
         >
-          <span className="font-mono text-slate-500">{c.source}</span>
-          <p className="mt-1 text-slate-400">{c.content_preview}</p>
+          <span className="font-mono text-muted-foreground text-xs">{c.source}</span>
+          <p className="mt-1 text-foreground/80">{c.content_preview}</p>
         </li>
       ))}
     </ul>
@@ -59,48 +59,48 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
   };
 
   return (
-    <div className="glass-terminal mb-4 space-y-4 rounded-md border p-3 pb-4">
-      <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+    <div className="glass-terminal mb-4 space-y-4 rounded-lg border border-border/50 p-4 pb-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Transparency
       </p>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Provenance of this run{auditId ? ` · audit ${auditId.slice(0, 8)}…` : ""}
       </p>
       {data && (
         <>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Prompt template
             </p>
-            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded border border-white/10 bg-black/40 p-2 font-mono text-[10px] text-slate-400">
+            <pre className="mt-2 max-h-24 overflow-auto whitespace-pre-wrap rounded-lg border border-border/50 bg-card p-3 font-mono text-xs text-muted-foreground/80">
               {data.promptTemplate.slice(0, 2000)}
             </pre>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Model versions
             </p>
-            <ul className="mt-1 font-mono text-[10px] text-slate-400">
+            <ul className="mt-2 font-mono text-xs text-muted-foreground/80">
               {models.map(([k, v]) => (
                 <li key={k}>
-                  <span className="text-slate-600">{k}:</span> {v}
+                  <span className="text-muted-foreground/60">{k}:</span> {v}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               SQL (read-only)
             </p>
-            <pre className="mt-1 max-h-24 overflow-auto rounded border border-white/10 bg-black/40 p-2 font-mono text-[10px] text-slate-500">
+            <pre className="mt-2 max-h-24 overflow-auto rounded-lg border border-border/50 bg-card p-3 font-mono text-xs text-muted-foreground/70">
               {data.sql}
             </pre>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               RAG chunks
             </p>
-            <div className="mt-1 max-h-40 overflow-y-auto pr-1">
+            <div className="mt-2 max-h-40 overflow-y-auto pr-1">
               <ChunkList chunks={data.ragChunks} />
             </div>
           </div>
@@ -108,7 +108,7 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
       )}
 
       <div>
-        <p className="mb-2 text-[10px] uppercase tracking-wider text-slate-600">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Was this response helpful? (feeds few-shot data)
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -117,14 +117,14 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
             disabled={!auditId || disabled || voteBusy || submitted !== null}
             onClick={() => void handle(1)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded border border-white/15 px-3 py-1.5 text-xs transition",
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
               submitted === "up"
-                ? "border-emerald-500/50 text-emerald-400"
-                : "text-slate-300 hover:border-slate-500/50 hover:text-white",
+                ? "border-success/50 text-success"
+                : "border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-primary/5",
             )}
             aria-label="Thumbs up"
           >
-            <ThumbsUp className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <ThumbsUp className="h-4 w-4" strokeWidth={2} />
             Up
           </button>
           <button
@@ -134,20 +134,20 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
               downOpen && correction.trim() ? void handle(-1) : setDownOpen(true)
             }
             className={cn(
-              "inline-flex items-center gap-1.5 rounded border border-white/15 px-3 py-1.5 text-xs transition",
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
               submitted === "down"
-                ? "border-amber-500/50 text-amber-400"
-                : "text-slate-300 hover:border-slate-500/50 hover:text-white",
+                ? "border-warning/50 text-warning"
+                : "border-border/50 text-muted-foreground hover:border-warning/40 hover:text-foreground hover:bg-warning/5",
             )}
             aria-label="Thumbs down"
           >
-            <ThumbsDown className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <ThumbsDown className="h-4 w-4" strokeWidth={2} />
             Down
           </button>
         </div>
         {downOpen && submitted === null && (
-          <div className="mt-2 space-y-1">
-            <label className="text-[10px] text-slate-500" htmlFor="correction">
+          <div className="mt-3 space-y-2">
+            <label className="text-xs text-muted-foreground" htmlFor="correction">
               What should the answer have been?
             </label>
             <textarea
@@ -155,7 +155,7 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
               value={correction}
               onChange={(e) => setCorrection(e.target.value)}
               rows={3}
-              className="w-full resize-y rounded border border-white/10 bg-black/50 px-2 py-1.5 font-mono text-xs text-slate-200"
+              className="w-full resize-y rounded-lg border border-border/50 bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground"
               placeholder="Correct figures, missing risk factors, or preferred wording for prompt tuning"
             />
             <button

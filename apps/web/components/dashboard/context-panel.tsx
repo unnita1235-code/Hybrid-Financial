@@ -60,31 +60,31 @@ export function ContextPanel({
         role="complementary"
         aria-label="RAG narrative and transparency"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border/30 px-4 py-4">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {title}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground mt-1">
               {isStreaming ? "Streaming…" : "Click the answer for step-by-step trace"}
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onOpenReasoning}
-              className="flex h-8 items-center gap-1 rounded border border-cyan-500/30 px-2 text-[10px] font-mono text-cyan-200/80 transition hover:border-cyan-400/50 hover:bg-cyan-500/5"
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-primary/40 px-2.5 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/10"
             >
-              <Brain className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <Brain className="h-4 w-4" strokeWidth={2} />
               Trace
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded border border-white/10 text-slate-400 transition hover:border-slate-500/50 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition hover:border-border hover:text-foreground hover:bg-accent/10"
               aria-label="Close"
             >
-              <X className="h-4 w-4" strokeWidth={1.5} />
+              <X className="h-4 w-4" strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -95,11 +95,11 @@ export function ContextPanel({
             onFeedback={onFeedback}
             disabled={isStreaming}
           />
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Narrative
           </p>
           {isStreaming && !narrative && (
-            <p className="font-mono text-sm text-slate-500">Awaiting text…</p>
+            <p className="font-sans text-sm text-muted-foreground">Awaiting text…</p>
           )}
           <div
             role="button"
@@ -114,16 +114,16 @@ export function ContextPanel({
               }
             }}
             className={cn(
-              "rounded-md border border-white/5 p-2 transition",
+              "rounded-lg border p-3 transition",
               narrative && !isStreaming
-                ? "cursor-pointer border-dashed border-cyan-500/20 bg-cyan-500/[0.04] hover:border-cyan-500/35"
-                : "cursor-default",
+                ? "cursor-pointer border-dashed border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10"
+                : "cursor-default border-border/30",
             )}
           >
             <div className="after:block after:clear-both after:content-['']">
               {chartData && chartData.length > 0 && (
                 <span
-                  className="float-right ml-2 inline-block pl-0.5"
+                  className="float-right ml-3 inline-block pl-1"
                   title="TTM / series spark"
                   aria-hidden
                 >
@@ -131,8 +131,8 @@ export function ContextPanel({
                     data={chartData}
                     width={150}
                     height={20}
-                    className="opacity-85"
-                    strokeClassName="stroke-cyan-400/60"
+                    className="opacity-80"
+                    strokeClassName="stroke-primary/50"
                   />
                 </span>
               )}
@@ -143,25 +143,25 @@ export function ContextPanel({
               />
             </div>
             {isStreaming && (
-              <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-cyan-500/50 align-middle" />
+              <span className="ml-1 inline-block h-3 w-0.5 animate-pulse bg-primary/60 align-middle" />
             )}
           </div>
           {narrative && !isStreaming && (
-            <p className="mt-2 text-[9px] text-slate-500">
+            <p className="mt-3 text-xs text-muted-foreground">
               Tip: click anywhere on the answer, or &quot;Trace&quot;, to open the
               pipeline YAML.
             </p>
           )}
           {sources && (
-            <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+            <div className="mt-6 space-y-3 border-t border-border/30 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Sources
               </p>
-              <pre className="max-h-32 overflow-x-auto overflow-y-auto rounded border border-white/10 bg-black/50 p-2 text-[10px] leading-tight text-slate-500">
+              <pre className="max-h-32 overflow-x-auto overflow-y-auto rounded-lg border border-border/50 bg-card p-3 text-xs leading-tight text-muted-foreground font-mono">
                 {sources.sql}
               </pre>
               {sources.documentHints && sources.documentHints.length > 0 && (
-                <ul className="list-inside list-disc text-xs text-slate-500">
+                <ul className="list-inside list-disc text-sm text-muted-foreground">
                   {sources.documentHints.map((d) => (
                     <li key={d}>{d}</li>
                   ))}

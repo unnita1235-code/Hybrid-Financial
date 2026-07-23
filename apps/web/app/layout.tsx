@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import { Sora, Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { AlertBadge } from "@/components/alerts/alert-badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const soraSans = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const interMono = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -34,47 +36,47 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
+        className={`${soraSans.variable} ${interMono.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
       >
         <Providers>
           <div className="flex min-h-screen flex-col bg-background">
-            <header className="glass-terminal sticky top-0 z-40 border-x-0 border-t-0 border-b border-border bg-background/90 px-4 py-3">
+            <header className="glass-terminal sticky top-0 z-40 border-x-0 border-t-0 border-b border-border/50 bg-background/95 px-4 py-3">
               <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <Link
                     href="/"
-                    className="font-mono text-xs uppercase tracking-[0.18em] text-foreground"
+                    className="font-sans text-sm font-bold uppercase tracking-[0.12em] text-foreground"
                   >
                     Aequitas FI
                   </Link>
-                  <nav className="flex items-center gap-2">
+                  <nav className="flex items-center gap-1">
                     <Link
                       href="/"
-                      className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-ring hover:text-foreground"
+                      className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                     >
                       Dashboard
                     </Link>
                     <Link
                       href="/research"
-                      className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-ring hover:text-foreground"
+                      className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                     >
                       Research
                     </Link>
                     <Link
                       href="/alerts"
-                      className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-ring hover:text-foreground"
+                      className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                     >
                       Alerts
                     </Link>
                     <Link
                       href="/debate"
-                      className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-ring hover:text-foreground"
+                      className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                     >
                       Debate
                     </Link>
                     <Link
                       href="/portfolio"
-                      className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition hover:border-ring hover:text-foreground"
+                      className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                     >
                       Portfolio
                     </Link>

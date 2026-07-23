@@ -321,20 +321,20 @@ export function DashboardClient() {
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-zinc-950 text-slate-50">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         <SavedReportsSidebar onSelect={onSaved} />
         <div className="flex min-w-0 flex-1 flex-col">
           <CommandBar onRun={runStream} isBusy={busy} />
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {query && (
-              <div className="mb-3 space-y-1 font-mono text-[10px] text-slate-500">
+              <div className="mb-4 space-y-1.5 font-sans text-xs text-muted-foreground">
                 <p>
-                  <span className="text-slate-600">Q</span> {query}
+                  <span className="text-muted-foreground/60">Q</span> {query}
                 </p>
                 {lastWhatIf && (
-                  <p className="text-amber-200/70">
-                    <span className="text-amber-500/60">What-if</span> {lastWhatIf}
+                  <p className="text-warning/80">
+                    <span className="text-warning/60">What-if</span> {lastWhatIf}
                   </p>
                 )}
               </div>
@@ -404,11 +404,11 @@ export function DashboardClient() {
               {sqlPayload ? (
                 <div
                   className={cn(
-                    "glass-terminal flex min-h-[120px] flex-col justify-end gap-2 p-3",
-                    simChrome && "border-2 border-dashed border-amber-400/70",
+                    "glass-terminal flex min-h-[120px] flex-col justify-end gap-3 p-4",
+                    simChrome && "border-2 border-dashed border-warning/50",
                   )}
                 >
-                  <p className="text-[9px] font-mono font-normal uppercase tracking-widest text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Series spark
                   </p>
                   <div className="flex min-h-0 items-end">
@@ -417,13 +417,13 @@ export function DashboardClient() {
                       width={280}
                       height={32}
                       strokeClassName={
-                        simChrome ? "stroke-amber-400/80" : "stroke-cyan-400/50"
+                        simChrome ? "stroke-warning/60" : "stroke-primary/50"
                       }
                     />
                   </div>
                 </div>
               ) : (
-                <div className="min-h-[120px] rounded-md border border-dashed border-white/10 p-3 text-xs text-slate-600">
+                <div className="min-h-[120px] rounded-lg border border-dashed border-border/30 p-4 text-xs text-muted-foreground">
                   Minimap spark (no grid) appears when SQL loads.
                 </div>
               )}
@@ -431,22 +431,22 @@ export function DashboardClient() {
             {sqlPayload && (
               <div
                 className={cn(
-                  "glass-terminal mt-4 overflow-hidden",
-                  simChrome && "border-2 border-dashed border-amber-400/70",
+                  "glass-terminal mt-4 overflow-hidden rounded-lg",
+                  simChrome && "border-2 border-dashed border-warning/50",
                 )}
               >
-                <p className="border-b border-white/10 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                <p className="border-b border-border/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Result rows
                 </p>
-                <div className="overflow-x-auto p-2">
-                  <table className="w-full min-w-[280px] border-collapse text-[10px] text-slate-400">
+                <div className="overflow-x-auto p-3">
+                  <table className="w-full min-w-[280px] border-collapse text-xs text-muted-foreground">
                     <tbody>
                       {sqlPayload.rows.map((row, i) => (
-                        <tr key={i} className="border-b border-white/5 last:border-0">
+                        <tr key={i} className="border-b border-border/20 last:border-0">
                           {Object.entries(row).map(([k, cell]) => (
-                            <td key={k} className="px-2 py-1 align-top">
-                              <span className="font-sans text-slate-600">{k}</span>{" "}
-                              <span className="font-numeric text-slate-200">
+                            <td key={k} className="px-3 py-2 align-top">
+                              <span className="font-sans text-muted-foreground/60">{k}</span>{" "}
+                              <span className="font-numeric text-foreground font-medium">
                                 {String(cell)}
                               </span>
                             </td>
@@ -461,7 +461,7 @@ export function DashboardClient() {
 
             {/* Inline hint: narrative is panel-first */}
             {sqlPayload && !narrative && !narrativeStreaming && !busy && (
-              <p className="mt-4 text-center text-xs text-slate-600">
+              <p className="mt-4 text-center text-xs text-muted-foreground">
                 Open the panel from the metric card, or it opens automatically when the
                 run completes.
               </p>

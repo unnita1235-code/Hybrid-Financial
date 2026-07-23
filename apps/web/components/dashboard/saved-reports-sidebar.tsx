@@ -18,28 +18,28 @@ export function SavedReportsSidebar({ onSelect, className }: SavedReportsSidebar
   return (
     <aside
       className={cn(
-        "flex w-56 shrink-0 flex-col border-r border-white/10 bg-zinc-950/40 backdrop-blur-2xl",
+        "flex w-56 shrink-0 flex-col border-r border-border/50 bg-card backdrop-blur-md",
         className,
       )}
     >
-      <div className="border-b border-white/10 px-3 py-3">
-        <div className="flex items-center gap-2 text-slate-500">
-          <Bookmark className="h-3.5 w-3.5" strokeWidth={1.5} />
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em]">
+      <div className="border-b border-border/30 px-4 py-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Bookmark className="h-4 w-4" strokeWidth={2} />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em]">
             Saved reports
           </span>
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto p-2">
-        <ul className="space-y-0.5">
+        <ul className="space-y-1">
           {SAVED.map((r) => (
             <li key={r.id}>
               <button
                 type="button"
                 onClick={() => onSelect(r.id)}
-                className="flex w-full items-start gap-2 rounded border border-transparent px-2 py-2 text-left text-xs text-slate-400 transition hover:border-white/10 hover:bg-white/5 hover:text-slate-200"
+                className="flex w-full items-start gap-2 rounded-lg border border-transparent px-3 py-2.5 text-left text-sm text-muted-foreground transition hover:border-border/50 hover:bg-primary/5 hover:text-foreground"
               >
-                <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                <FileText className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
                 <span className="leading-snug">{r.name}</span>
               </button>
             </li>
