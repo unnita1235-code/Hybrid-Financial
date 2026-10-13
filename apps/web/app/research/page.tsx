@@ -2,6 +2,9 @@
 
 import { Copy, Download, Loader2, Mic, MicOff, RotateCcw } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/hooks/use-voice-input";
 import { readResearchSse, type ResearchStreamEvent } from "@/lib/research-stream";
@@ -14,9 +17,16 @@ type SubQuestionItem = {
 };
 
 function confidenceClasses(score: number) {
-  if (score > 0.7) return "bg-emerald-500";
-  if (score >= 0.5) return "bg-amber-400";
-  return "bg-red-500";
+  if (score > 0.7) return "bg-success";
+  if (score >= 0.5) return "bg-warning";
+  return "bg-destructive";
+}
+
+function confidenceVariant(score: number | null) {
+  if (score == null) return "default" as const;
+  if (score > 0.7) return "verified" as const;
+  if (score >= 0.5) return "throttled" as const;
+  return "failed" as const;
 }
 
 export default function ResearchPage() {
@@ -149,53 +159,106 @@ export default function ResearchPage() {
     }
   };
 
+  const isError = error != null && error.length > 0;
+  const status: "Ready" | "Running" | "Streaming" | "Partial" | "Completed" | "No results" | "Error" =
+    isError
+      ? "Error"
+      : isRunning
+        ? targetSummaryWords.length > 0 || subQuestions.length > 0
+          ? "Streaming"
+          : "Running"
+        : summaryText || confidence != null
+          ? "Completed"
+          : subQuestions.length > 0
+            ? "Partial"
+            : history.length > 0 || query
+              ? "No results"
+              : "Ready";
+  const statusVariant =
+    status === "Completed"
+      ? "verified"
+      : status === "Running" || status === "Streaming" || status === "Partial"
+        ? "primary"
+        : status === "Error"
+          ? "failed"
+          : status === "No results"
+            ? "throttled"
+            : "default";
+
   return (
-    <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-6 lg:grid-cols-[1.1fr_1.5fr_1fr]">
-      <section className="glass-terminal rounded-xl p-4 sm:p-5">
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
-          Deep research workspace
+    <div className="mx-auto w-full max-w-7xl overflow-x-clip px-4 py-6">
+      <div className="mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-sans text-lg font-semibold tracking-tight text-foreground">
+            Deep research workspace
+          </h1>
+          <Badge variant={statusVariant} aria-live="polite">
+            {status}
+          </Badge>
+          {warning && <Badge variant="throttled">Discrepancy flagged</Badge>}
+        </div>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Ask a research question requiring SQL + document evidence synthesis.
+          Sub-questions stream first, then the executive summary and confidence.
+        </p>
+      </div>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
+      <section aria-label="Research composer">
+        <Card className="p-4 sm:p-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          Research question
         </p>
         <form onSubmit={runResearch} className="mt-3 space-y-3">
+          <label htmlFor="research-query" className="sr-only">
+            Research question (10 to 2000 characters)
+          </label>
           <textarea
+            id="research-query"
             value={query}
             onChange={(e) => setQuery(e.target.value.slice(0, 2000))}
             rows={9}
             minLength={10}
             maxLength={2000}
             placeholder="Enter a research question requiring SQL + document evidence synthesis..."
-            className="min-h-[220px] w-full resize-y rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground outline-none transition focus:border-ring focus:ring-1 focus:ring-ring/40"
+            className="min-h-[220px] w-full resize-y rounded-md border border-input bg-card p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="submit"
               disabled={!canRun}
-              className="rounded-md border border-primary bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              className="min-h-[44px]"
             >
               {isRunning ? "Running..." : "Run Research"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               disabled={!voice.supported || voice.state === "listening"}
               onClick={voice.start}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+              aria-label="Start voice input"
             >
-              <Mic className="h-3.5 w-3.5" /> Voice
-            </button>
-            <button
+              <Mic className="h-3.5 w-3.5" aria-hidden /> Voice
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               disabled={voice.state !== "listening"}
               onClick={voice.stop}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+              aria-label="Stop voice input"
             >
-              <MicOff className="h-3.5 w-3.5" /> Stop
-            </button>
-            <button
+              <MicOff className="h-3.5 w-3.5" aria-hidden /> Stop
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={voice.clear}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+              aria-label="Clear voice transcript"
             >
-              <RotateCcw className="h-3.5 w-3.5" /> Clear voice
-            </button>
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Clear voice
+            </Button>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <p>{query.length}/2000 chars</p>
@@ -211,71 +274,85 @@ export default function ResearchPage() {
             </p>
           </div>
           {voice.error && (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive" role="alert">
               {voice.error}
             </p>
           )}
         </form>
+        </Card>
       </section>
 
-      <section className="glass-terminal rounded-xl p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-sm text-slate-200">
+      <section aria-label="Research progress and synthesis">
+        <Card className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 text-sm text-foreground">
           {isRunning ? (
-            <Loader2 className="h-4 w-4 animate-spin text-slate-300" />
+            <Loader2 className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none" aria-hidden />
           ) : (
-            <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
+            <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground" aria-hidden />
           )}
-          <span>{statusText || "Planning questions..."}</span>
+          <span role="status">{statusText || "Planning questions..."}</span>
         </div>
 
         {warning && (
-          <div className="mt-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200">
-            ⚠ SQL data and document evidence may conflict — review carefully
+          <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning" role="alert">
+            SQL data and document evidence may conflict — review carefully
           </div>
         )}
 
         <div className="mt-4">
-          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             Sub-questions
           </p>
+          {subQuestions.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Planned sub-questions appear here once the stream starts.
+            </p>
+          ) : (
           <ol className="mt-2 space-y-2">
             {subQuestions.map((q) => (
               <li
                 key={q.index}
-                className="animate-[fadeIn_280ms_ease-out] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span>
+                  <span className="min-w-0 break-words">
                     {q.index}. {q.question}
                   </span>
                   {q.done ? (
-                    <span className="text-xs text-emerald-300">
-                      ✓ ({q.ragHits ?? 0} RAG hits)
-                    </span>
+                    <Badge variant="verified" className="shrink-0">
+                      {q.ragHits ?? 0} RAG hits
+                    </Badge>
                   ) : (
-                    <span className="text-xs text-slate-500">running...</span>
+                    <Badge variant="primary" className="shrink-0">
+                      running…
+                    </Badge>
                   )}
                 </div>
               </li>
             ))}
           </ol>
+          )}
         </div>
 
         <div className="mt-5">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
               Executive summary
             </p>
             <div className="flex items-center gap-1">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={async () => navigator.clipboard.writeText(summaryText)}
-                className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                aria-label="Copy summary"
               >
-                <Copy className="h-3 w-3" /> Copy
-              </button>
-              <button
+                <Copy className="h-3 w-3" aria-hidden /> Copy
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   const payload = {
                     query,
@@ -293,50 +370,57 @@ export default function ResearchPage() {
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
-                className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                aria-label="Export research session JSON"
               >
-                <Download className="h-3 w-3" /> Export
-              </button>
+                <Download className="h-3 w-3" aria-hidden /> Export
+              </Button>
             </div>
           </div>
-          <p className="mt-2 min-h-[160px] rounded-md border border-border bg-card p-3 text-sm leading-6 text-foreground">
+          <p className="mt-2 min-h-[160px] break-words rounded-md border border-border bg-card p-3 text-sm leading-6 text-foreground">
             {summaryText || "Summary will stream here when synthesis starts..."}
           </p>
         </div>
 
         <div className="mt-5">
-          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
-            Confidence
-          </p>
-          <div className="mt-2 h-3 w-full overflow-hidden rounded-full border border-border bg-muted">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Confidence
+            </p>
+            <Badge variant={confidenceVariant(confidence)}>
+              {confidence == null
+                ? "Awaiting score"
+                : `${(confidence * 100).toFixed(1)}%`}
+            </Badge>
+          </div>
+          <div className="mt-2 h-3 w-full overflow-hidden rounded-full border border-border bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((confidence ?? 0) * 100)} aria-label="Research confidence">
             <div
               className={cn(
-                "h-full transition-all duration-500",
-                confidence == null ? "bg-slate-700" : confidenceClasses(confidence),
+                "h-full transition-all duration-500 motion-reduce:transition-none",
+                confidence == null ? "bg-muted-foreground/40" : confidenceClasses(confidence),
               )}
               style={{ width: `${Math.round((confidence ?? 0) * 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {confidence == null
-              ? "Awaiting score..."
-              : `${(confidence * 100).toFixed(1)}%`}
-          </p>
         </div>
 
         {error && (
-          <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
             {error}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Query preserved — adjust and run again.
+            </p>
           </div>
         )}
+        </Card>
       </section>
 
-      <aside className="glass-terminal rounded-xl p-4 sm:p-5">
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
+      <aside aria-label="Evidence and history" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
+        <Card className="p-4 sm:p-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
           Evidence and history
         </p>
         <div className="mt-3 rounded-md border border-border bg-card p-3">
-          <p className="text-xs font-medium text-foreground">Recent runs</p>
+          <p className="text-xs font-medium text-foreground">Recent runs (up to 8)</p>
           <ul className="mt-2 space-y-1">
             {history.length === 0 ? (
               <li className="text-xs text-muted-foreground">
@@ -348,7 +432,7 @@ export default function ResearchPage() {
                   <button
                     type="button"
                     onClick={() => setQuery(h)}
-                    className="w-full rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="w-full rounded px-2 py-1 text-left text-xs text-muted-foreground break-words transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
                   >
                     {h}
                   </button>
@@ -366,20 +450,23 @@ export default function ResearchPage() {
               </li>
             ) : (
               subQuestions.map((s) => (
-                <li key={s.index} className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Q{s.index}:</span>{" "}
-                  {s.question}
+                <li key={s.index} className="text-xs text-muted-foreground break-words">
+                  <Badge variant={s.done ? "verified" : "primary"} className="mb-1">
+                    Q{s.index} {s.done ? "completed" : "running"}
+                  </Badge>{" "}
+                  <span className="font-medium text-foreground">{s.question}</span>
                   <br />
-                  <span className="text-[11px]">
-                    Status: {s.done ? "completed" : "running"} · RAG hits:{" "}
-                    {s.ragHits ?? 0}
+                  <span className="font-numeric text-[11px] tabular-nums">
+                    RAG hits: {s.ragHits ?? 0}
                   </span>
                 </li>
               ))
             )}
           </ol>
         </div>
+        </Card>
       </aside>
+      </div>
     </div>
   );
 }

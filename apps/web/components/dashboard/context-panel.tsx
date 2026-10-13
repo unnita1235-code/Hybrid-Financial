@@ -4,6 +4,9 @@ import { Brain, X } from "lucide-react";
 import { InlineSparkline } from "@/components/dashboard/inline-sparkline";
 import { NarrativeWithSqlTooltips } from "@/components/dashboard/narrative-sql-numbers";
 import { TransparencySection } from "@/components/dashboard/transparency-section";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { TransparencyPayload } from "@/lib/insight-stream";
 import { cn } from "@/lib/utils";
 
@@ -53,39 +56,53 @@ export function ContextPanel({
       />
       <aside
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col",
-          "glass-terminal transition-transform duration-300 ease-out",
+          "fixed right-0 top-0 z-50 flex h-full w-full flex-col",
+          "border-l border-border bg-card",
+          "sm:max-w-[380px]",
+          "transition-transform duration-300 ease-out motion-reduce:transition-none",
           open ? "translate-x-0" : "translate-x-full",
         )}
         role="complementary"
-        aria-label="RAG narrative and transparency"
+        aria-label="Evidence and provenance inspector"
+        aria-hidden={!open}
       >
-        <div className="flex items-center justify-between border-b border-border/30 px-4 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 border-b border-border/30 px-4 py-4">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {title}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {isStreaming ? "Streaming…" : "Click the answer for step-by-step trace"}
-            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Badge variant={isStreaming ? "primary" : narrative ? "verified" : "default"}>
+                {isStreaming ? "Streaming" : narrative ? "Completed" : "Ready"}
+              </Badge>
+              <p className="truncate text-xs text-muted-foreground">
+                {isStreaming
+                  ? "Streaming response…"
+                  : "Click the answer for step-by-step trace"}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onOpenReasoning}
-              className="flex h-8 items-center gap-1.5 rounded-lg border border-primary/40 px-2.5 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/10"
+              aria-label="Open reasoning trace"
             >
-              <Brain className="h-4 w-4" strokeWidth={2} />
+              <Brain className="h-4 w-4" strokeWidth={2} aria-hidden />
               Trace
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition hover:border-border hover:text-foreground hover:bg-accent/10"
-              aria-label="Close"
+              aria-label="Close evidence panel"
+              className="px-2.5"
             >
-              <X className="h-4 w-4" strokeWidth={2} />
-            </button>
+              <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </Button>
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -99,32 +116,37 @@ export function ContextPanel({
             Narrative
           </p>
           {isStreaming && !narrative && (
-            <p className="font-sans text-sm text-muted-foreground">Awaiting text…</p>
+            <p className="font-sans text-sm text-muted-foreground" role="status">
+              Awaiting text…
+            </p>
           )}
-          <div
-            role="button"
-            tabIndex={narrative ? 0 : -1}
-            onClick={() => {
-              if (narrative && !isStreaming) onOpenReasoning();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                if (narrative && !isStreaming) onOpenReasoning();
-              }
-            }}
+          <Card
             className={cn(
-              "rounded-lg border p-3 transition",
+              "p-3",
               narrative && !isStreaming
                 ? "cursor-pointer border-dashed border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10"
-                : "cursor-default border-border/30",
+                : "cursor-default",
             )}
           >
+            <div
+              role="button"
+              tabIndex={narrative ? 0 : -1}
+              onClick={() => {
+                if (narrative && !isStreaming) onOpenReasoning();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (narrative && !isStreaming) onOpenReasoning();
+                }
+              }}
+              aria-label={narrative ? "Open reasoning trace for this answer" : "Narrative answer"}
+            >
             <div className="after:block after:clear-both after:content-['']">
               {chartData && chartData.length > 0 && (
                 <span
                   className="float-right ml-3 inline-block pl-1"
-                  title="TTM / series spark"
+                  title="Series spark from returned rows"
                   aria-hidden
                 >
                   <InlineSparkline
@@ -143,9 +165,10 @@ export function ContextPanel({
               />
             </div>
             {isStreaming && (
-              <span className="ml-1 inline-block h-3 w-0.5 animate-pulse bg-primary/60 align-middle" />
+              <span className="ml-1 inline-block h-3 w-0.5 animate-pulse bg-primary/60 align-middle" aria-hidden />
             )}
-          </div>
+            </div>
+          </Card>
           {narrative && !isStreaming && (
             <p className="mt-3 text-xs text-muted-foreground">
               Tip: click anywhere on the answer, or &quot;Trace&quot;, to open the
@@ -157,7 +180,7 @@ export function ContextPanel({
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Sources
               </p>
-              <pre className="max-h-32 overflow-x-auto overflow-y-auto rounded-lg border border-border/50 bg-card p-3 text-xs leading-tight text-muted-foreground font-mono">
+              <pre className="max-h-32 overflow-auto rounded-md border border-border/50 bg-muted p-3 font-mono text-xs leading-tight text-muted-foreground">
                 {sources.sql}
               </pre>
               {sources.documentHints && sources.documentHints.length > 0 && (

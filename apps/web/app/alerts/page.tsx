@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, Bell, Info, Loader2, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 type AlertItem = {
   id: string;
@@ -31,13 +34,11 @@ function timeAgo(iso: string | null): string {
   return `${days}d ago`;
 }
 
-function severityClasses(severity: TriageResult["severity"]) {
-  if (severity === "critical") return "bg-red-600/20 text-red-200 border-red-400/40";
-  if (severity === "high")
-    return "bg-orange-600/20 text-orange-200 border-orange-400/40";
-  if (severity === "medium")
-    return "bg-amber-600/20 text-amber-200 border-amber-400/40";
-  return "bg-emerald-600/20 text-emerald-200 border-emerald-400/40";
+function triageBadgeVariant(severity: TriageResult["severity"]) {
+  if (severity === "critical") return "failed" as const;
+  if (severity === "high") return "throttled" as const;
+  if (severity === "medium") return "primary" as const;
+  return "default" as const;
 }
 
 export default function AlertsPage() {
@@ -46,6 +47,7 @@ export default function AlertsPage() {
   const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
   const [busyTriage, setBusyTriage] = useState<Record<string, boolean>>({});
   const [busyRead, setBusyRead] = useState<Record<string, boolean>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +73,11 @@ export default function AlertsPage() {
 
   const unread = useMemo(() => alerts.filter((a) => !a.read_at), [alerts]);
 
+  const selected = useMemo(
+    () => unread.find((a) => a.id === selectedId) ?? null,
+    [unread, selectedId],
+  );
+
   const runTriage = async (id: string) => {
     setBusyTriage((p) => ({ ...p, [id]: true }));
     try {
@@ -91,6 +98,7 @@ export default function AlertsPage() {
       const res = await fetch(`/api/alerts/${id}/read`, { method: "PATCH" });
       if (!res.ok) throw new Error(`Mark as read failed (${res.status})`);
       setAlerts((prev) => prev.filter((a) => a.id !== id));
+      setSelectedId((prev) => (prev === id ? null : prev));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Mark as read failed");
     } finally {
@@ -104,145 +112,359 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100">Unread alerts</h1>
-        <button
-          onClick={() => void loadAlerts()}
-          className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100"
-        >
-          Refresh
-        </button>
+    <div className="mx-auto w-full max-w-7xl overflow-x-clip px-4 py-6">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-sans text-lg font-semibold tracking-tight text-foreground">
+            Alerts
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Review unread alerts, run triage on individual items, expand
+            why-triggered explainability, and mark items read when done.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="default" aria-live="polite">
+            <Bell className="h-3 w-3" aria-hidden />
+            {unread.length} unread
+          </Badge>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadAlerts()}
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <p className="mb-4 text-xs text-slate-500">{unread.length} unread items</p>
-
       {error && (
-        <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div
+          className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="glass-terminal rounded-xl p-4 text-sm text-slate-500">
-          Loading alerts...
-        </div>
+        <Card className="p-6 text-center">
+          <p
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+            role="status"
+          >
+            <Loader2
+              className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none"
+              aria-hidden
+            />
+            Loading alerts&hellip;
+          </p>
+        </Card>
       ) : unread.length === 0 ? (
-        <div className="glass-terminal rounded-xl p-4 text-sm text-slate-500">
-          No unread alerts.
-        </div>
+        <Card className="p-6 text-center">
+          <div className="mx-auto max-w-md">
+            <Bell
+              className="mx-auto h-8 w-8 text-muted-foreground"
+              aria-hidden
+            />
+            <h2 className="mt-2 text-base font-semibold text-foreground">
+              No unread alerts
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              New alerts appear here when the alerts endpoint returns unread
+              items. Use Refresh to reload the current list.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-4"
+              onClick={() => void loadAlerts()}
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              Refresh
+            </Button>
+          </div>
+        </Card>
       ) : (
-        <div className="space-y-3">
-          {unread.map((alert) => {
-            const triage = triageById[alert.id];
-            const bodyExcerpt = (alert.body || "").slice(0, 200);
-            return (
-              <article key={alert.id} className="glass-terminal rounded-xl p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-medium text-slate-100">
-                    {alert.title || "Untitled alert"}
-                  </h2>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span className="rounded border border-white/10 bg-zinc-900 px-2 py-0.5 text-slate-300">
-                      z-score:{" "}
-                      {alert.z_score == null ? "n/a" : Number(alert.z_score).toFixed(2)}
-                    </span>
-                    <span className="text-slate-500">{timeAgo(alert.created_at)}</span>
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <section aria-label="Unread alerts" className="min-w-0 space-y-3">
+            {unread.map((alert) => {
+              const triage = triageById[alert.id];
+              const bodyExcerpt = (alert.body || "").slice(0, 200);
+              const expanded = !!expandedById[alert.id];
+              return (
+                <Card key={alert.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h2 className="min-w-0 flex-1 break-words text-sm font-medium text-foreground">
+                      {alert.title || "Untitled alert"}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="default">Unread</Badge>
+                      <Badge variant="default" className="font-mono">
+                        z-score:{" "}
+                        {alert.z_score == null
+                          ? "n/a"
+                          : Number(alert.z_score).toFixed(2)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        <time dateTime={alert.created_at ?? undefined}>
+                          {timeAgo(alert.created_at)}
+                        </time>
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <p className="mt-2 text-sm text-slate-300">{bodyExcerpt}</p>
+                  <p className="mt-2 break-words text-sm text-muted-foreground">
+                    {bodyExcerpt}
+                  </p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => void runTriage(alert.id)}
-                    disabled={!!busyTriage[alert.id]}
-                    className="rounded-md border border-white/20 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {busyTriage[alert.id] ? "Triaging..." : "Triage"}
-                  </button>
-                  <button
-                    onClick={() =>
-                      setExpandedById((p) => ({ ...p, [alert.id]: !p[alert.id] }))
-                    }
-                    className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100"
-                  >
-                    {expandedById[alert.id] ? "Hide details" : "Why triggered"}
-                  </button>
-                  <button
-                    onClick={() => void markRead(alert.id)}
-                    disabled={!!busyRead[alert.id]}
-                    className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/20 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {busyRead[alert.id] ? "Marking..." : "Mark as read"}
-                  </button>
-                </div>
-
-                {triage && (
-                  <div className="mt-3 rounded-lg border border-white/10 bg-zinc-900/40 p-3">
-                    <span
-                      className={cn(
-                        "inline-flex rounded border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
-                        severityClasses(triage.severity),
-                      )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void runTriage(alert.id)}
+                      disabled={!!busyTriage[alert.id]}
                     >
-                      {triage.severity}
-                    </span>
-                    <p className="mt-2 text-sm text-slate-200">{triage.summary}</p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Suggested action: {triage.suggested_action}
-                    </p>
-                    {(triage.key_catalysts?.length ?? 0) > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs text-slate-500">Key catalysts</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-300">
-                          {(triage.key_catalysts ?? []).map((k) => (
-                            <li key={k}>{k}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                      {busyTriage[alert.id] ? "Triaging..." : "Triage"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-expanded={expanded}
+                      onClick={() =>
+                        setExpandedById((p) => ({
+                          ...p,
+                          [alert.id]: !p[alert.id],
+                        }))
+                      }
+                    >
+                      {expanded ? "Hide details" : "Why triggered"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label={`Inspect ${alert.title || "untitled alert"}`}
+                      onClick={() => setSelectedId(alert.id)}
+                    >
+                      Inspect
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void markRead(alert.id)}
+                      disabled={!!busyRead[alert.id]}
+                    >
+                      {busyRead[alert.id] ? "Marking..." : "Mark as read"}
+                    </Button>
                   </div>
-                )}
-                {expandedById[alert.id] && (
-                  <div className="mt-3 rounded-lg border border-white/10 bg-zinc-900/30 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Explainability
-                    </p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      This alert is generated by anomaly monitoring over market and
-                      portfolio signals. The z-score indicates deviation magnitude from
-                      baseline behavior.
-                    </p>
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Confidence</span>
-                        <span>
-                          {(confidenceFromZ(alert.z_score) * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="mt-1 h-2 overflow-hidden rounded-full border border-white/10 bg-zinc-900">
+
+                  {triage && (
+                    <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+                      <Badge variant={triageBadgeVariant(triage.severity)}>
+                        {triage.severity === "critical" ||
+                        triage.severity === "high" ? (
+                          <AlertTriangle
+                            className="h-3 w-3"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Info className="h-3 w-3" aria-hidden />
+                        )}
+                        {triage.severity}
+                      </Badge>
+                      <p className="mt-2 break-words text-sm text-foreground">
+                        {triage.summary}
+                      </p>
+                      <p className="mt-1 break-words text-sm text-muted-foreground">
+                        Suggested action: {triage.suggested_action}
+                      </p>
+                      {(triage.key_catalysts?.length ?? 0) > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-foreground">
+                            Key catalysts
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                            {(triage.key_catalysts ?? []).map((k) => (
+                              <li key={k} className="break-words">
+                                {k}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {expanded && (
+                    <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        Why triggered
+                      </p>
+                      <p className="mt-1 break-words text-sm text-muted-foreground">
+                        This alert is generated by anomaly monitoring over market
+                        and portfolio signals. The z-score indicates deviation
+                        magnitude from baseline behavior.
+                      </p>
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Confidence</span>
+                          <span className="font-mono tabular-nums">
+                            {(confidenceFromZ(alert.z_score) * 100).toFixed(0)}%
+                          </span>
+                        </div>
                         <div
-                          className="h-full bg-cyan-400/80"
-                          style={{ width: `${confidenceFromZ(alert.z_score) * 100}%` }}
-                        />
+                          className="mt-1 h-2 overflow-hidden rounded-full border border-border bg-muted"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.round(
+                            confidenceFromZ(alert.z_score) * 100,
+                          )}
+                          aria-label={`Confidence for ${alert.title || "untitled alert"}`}
+                        >
+                          <div
+                            className="h-full bg-secondary transition-all duration-500 motion-reduce:transition-none"
+                            style={{
+                              width: `${confidenceFromZ(alert.z_score) * 100}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
-                        Triage now
-                      </button>
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
-                        Create task
-                      </button>
-                      <button className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-white/20">
-                        Dismiss risk
-                      </button>
-                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </section>
+
+          <aside
+            aria-label="Alert detail"
+            className="min-w-0 xl:sticky xl:top-4 xl:self-start"
+          >
+            <Card className="p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Alert detail
+              </p>
+              {selected ? (
+                <div className="mt-2 min-w-0">
+                  <h2 className="break-words text-sm font-semibold text-foreground">
+                    {selected.title || "Untitled alert"}
+                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="default">Unread</Badge>
+                    <Badge variant="default" className="font-mono">
+                      z-score:{" "}
+                      {selected.z_score == null
+                        ? "n/a"
+                        : Number(selected.z_score).toFixed(2)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      <time dateTime={selected.created_at ?? undefined}>
+                        {timeAgo(selected.created_at)}
+                      </time>
+                    </span>
                   </div>
-                )}
-              </article>
-            );
-          })}
+                  <p className="mt-2 break-words text-sm leading-6 text-foreground">
+                    {selected.body || "No body provided for this alert."}
+                  </p>
+
+                  {triageById[selected.id] ? (
+                    <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+                      <Badge
+                        variant={triageBadgeVariant(
+                          triageById[selected.id].severity,
+                        )}
+                      >
+                        {triageById[selected.id].severity}
+                      </Badge>
+                      <p className="mt-2 break-words text-sm text-foreground">
+                        {triageById[selected.id].summary}
+                      </p>
+                      <p className="mt-1 break-words text-sm text-muted-foreground">
+                        Suggested action:{" "}
+                        {triageById[selected.id].suggested_action}
+                      </p>
+                      {(triageById[selected.id].key_catalysts?.length ?? 0) >
+                        0 && (
+                        <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                          {(triageById[selected.id].key_catalysts ?? []).map(
+                            (k) => (
+                              <li key={k} className="break-words">
+                                {k}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-3 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      No triage result yet for this alert. Use Triage to request
+                      one; nothing runs until you do.
+                    </p>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void runTriage(selected.id)}
+                      disabled={!!busyTriage[selected.id]}
+                    >
+                      {busyTriage[selected.id] ? "Triaging..." : "Triage"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-expanded={!!expandedById[selected.id]}
+                      onClick={() =>
+                        setExpandedById((p) => ({
+                          ...p,
+                          [selected.id]: !p[selected.id],
+                        }))
+                      }
+                    >
+                      {expandedById[selected.id]
+                        ? "Hide details"
+                        : "Why triggered"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void markRead(selected.id)}
+                      disabled={!!busyRead[selected.id]}
+                    >
+                      {busyRead[selected.id] ? "Marking..." : "Mark as read"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedId(null)}
+                    >
+                      Close panel
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Opening or closing this panel never marks the alert read and
+                    never runs triage on its own.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Select Inspect on an alert to review its full body, z-score,
+                  timestamp, and triage result here. Opening this panel never
+                  marks an alert read or runs triage.
+                </p>
+              )}
+            </Card>
+          </aside>
         </div>
       )}
     </div>

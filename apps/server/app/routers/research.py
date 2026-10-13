@@ -95,11 +95,7 @@ async def _run_sql(sql_graph: Any, sub_question: str) -> dict[str, Any]:
 
 
 async def _run_rag(sub_question: str) -> list[dict[str, Any]]:
-    if not (
-        settings.openai_api_key
-        and settings.supabase_url
-        and settings.supabase_service_key
-    ):
+    if not settings.openai_api_key:
         return []
     try:
         emb = OpenAIEmbeddings(
@@ -107,14 +103,11 @@ async def _run_rag(sub_question: str) -> list[dict[str, Any]]:
             api_key=settings.openai_api_key,
         )
         vec = await emb.aembed_query(sub_question)
-        from aequitas_ai import SupabaseRagConfig, SupabaseRagRetriever
+        from aequitas_ai import PostgresRagRetriever
 
-        retriever = SupabaseRagRetriever(
-            config=SupabaseRagConfig(
-                supabase_url=settings.supabase_url,
-                supabase_key=settings.supabase_service_key,
-            )
-        )
+        from app.db import get_session_maker
+
+        retriever = PostgresRagRetriever(session_factory=get_session_maker())
         chunks = await retriever.retrieve(vec, match_count=8)
         return chunks if isinstance(chunks, list) else []
     except Exception:

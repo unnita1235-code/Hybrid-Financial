@@ -33,7 +33,6 @@ dependencies = [
   "httpx>=0.28.0",
   "python-multipart>=0.0.9",
   "nest-asyncio>=1.6.0",
-  "pyjwt[crypto]>=2.8.0",
 ]
 
 [project.optional-dependencies]

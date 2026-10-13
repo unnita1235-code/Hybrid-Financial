@@ -21,7 +21,7 @@ export function InlineSparkline({
   className,
   height = 20,
   width = 120,
-  strokeClassName = "stroke-white/50",
+  strokeClassName = "stroke-primary/50",
 }: InlineSparklineProps) {
   if (!data || data.length < 1) {
     return (

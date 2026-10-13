@@ -1,35 +1,34 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Aequitas%20FI-brightgreen?style=for-the-badge)](https://aequitas-web-phi.vercel.app/) [![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20Next.js%20%7C%20LangGraph-black?style=for-the-badge)](https://github.com/unnita1235-code/Hybrid-Financial)
 
-
 ## Live Preview
 
 [![Aequitas FI — Live Dashboard](https://api.microlink.io/?url=https://aequitas-web-phi.vercel.app/&screenshot=true&meta=false&embed=screenshot.url)](https://aequitas-web-phi.vercel.app/)
 
 # Aequitas FI
 
-**Aequitas FI** is a production-oriented **hybrid SQL + RAG** financial dashboard: structured analytics over **Postgres** (compatible with **Supabase**) and **grounded** answers using **pgvector** retrieval, orchestrated with **LangGraph** stateful agents and a **Next.js** front end.
+**Aequitas FI** is a production-oriented **hybrid SQL + RAG** financial dashboard: structured analytics over **Render PostgreSQL** and **grounded** answers using **pgvector** retrieval, orchestrated with **LangGraph** stateful agents and a **Next.js** front end.
 
 ## Portfolio / positioning
 
 **Aequitas FI** is an **AI engineering** portfolio build that demonstrates **agentic orchestration** and **tight product UX** (“vibe” UI): a **multi-agent router** where **OpenAI o3–class models** (configurable, default `o3-mini`) own **read-only Text-to-SQL** and **Claude 3.5 Sonnet** (or GPT via override) handles **RAG-aware synthesis** and narrative, with a **PII redaction** layer (Presidio) on the synthesis path, **LangGraph** checkpoints for the **Temporal (compare periods)** flow, and a **transparency/audit** trail (prompt, SQL, RAG chunks, model versions, human feedback) suitable for financial governance demos.
 
-| Capability | How it is expressed in this repo |
-|------------|----------------------------------|
-| **Hybrid SQL + RAG** | [`packages/ai-core/aequitas_ai/sql_engine.py`](packages/ai-core/aequitas_ai/sql_engine.py) (Architect → Validator → execute) + [`rag_engine.py`](packages/ai-core/aequitas_ai/rag_engine.py) + FastAPI `POST /v1/insight/stream` and Next `/api/insight/stream`. |
-| **Temporal “time travel”** | [`packages/ai-core/aequitas_ai/agents/temporal_agent.py`](packages/ai-core/aequitas_ai/agents/temporal_agent.py) + `WebSocket /v1/temporal/ws` (UI: **Compare** mode). |
-| **PII redactor** | [`apps/server/middleware/redactor.py`](apps/server/middleware/redactor.py) around selected LLM calls. |
-| **CI** | [`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml) — Prettier, ESLint, `pytest`, optional DeepEval when `OPENAI_API_KEY` is set in repository secrets. |
+| Capability                 | How it is expressed in this repo                                                                                                                                                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hybrid SQL + RAG**       | [`packages/ai-core/aequitas_ai/sql_engine.py`](packages/ai-core/aequitas_ai/sql_engine.py) (Architect → Validator → execute) + [`rag_engine.py`](packages/ai-core/aequitas_ai/rag_engine.py) + FastAPI `POST /v1/insight/stream` and Next `/api/insight/stream`. |
+| **Temporal “time travel”** | [`packages/ai-core/aequitas_ai/agents/temporal_agent.py`](packages/ai-core/aequitas_ai/agents/temporal_agent.py) + `WebSocket /v1/temporal/ws` (UI: **Compare** mode).                                                                                           |
+| **PII redactor**           | [`apps/server/middleware/redactor.py`](apps/server/middleware/redactor.py) around selected LLM calls.                                                                                                                                                            |
+| **CI**                     | [`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml) — Prettier, ESLint, `pytest`, optional DeepEval when `OPENAI_API_KEY` is set in repository secrets.                                                                                     |
 
 ## Architecture
 
-| Layer | Technology | Role |
-|--------|------------|------|
-| **Frontend** | [Next.js](https://nextjs.org) (App Router), [Tailwind CSS](https://tailwindcss.com), [Lucide](https://lucide.dev) icons, [shadcn/ui](https://ui.shadcn.com) (configured via `components.json`) | Monochrome, dark-first dashboard UI. |
-| **API & orchestration** | [FastAPI](https://fastapi.tiangolo.com), [LangGraph](https://github.com/langchain-ai/langgraph) | REST/streaming entrypoints, **stateful** agent graphs: SQL path, RAG path, and synthesis. |
-| **Data** | [SQLAlchemy](https://www.sqlalchemy.org) 2, [Alembic](https://alembic.sqlalchemy.org) | Models and migrations; targets **Postgres 16 + pgvector** (same feature set you use in **Supabase**). |
-| **AI (split responsibilities)** | **o3-mini** (SQL), **Claude 3.5 Sonnet** (synthesis) | o3-mini produces **read-only** SQL from schema + question; Sonnet fuses **tabular results** and **retrieved chunks** into final narrative. |
-| **Shared Python** | `packages/ai-core` (`aequitas_ai`) | Prompts (`prompts/`), graph **state** (`agents/state.py`), future LangGraph **nodes** here. |
-| **Shared database** | `packages/database` (`aequitas_database`) | Schemas, **Alembic** migrations, async session helpers. |
+| Layer                           | Technology                                                                                                                                                                                     | Role                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Frontend**                    | [Next.js](https://nextjs.org) (App Router), [Tailwind CSS](https://tailwindcss.com), [Lucide](https://lucide.dev) icons, [shadcn/ui](https://ui.shadcn.com) (configured via `components.json`) | Monochrome, dark-first dashboard UI.                                                                                                       |
+| **API & orchestration**         | [FastAPI](https://fastapi.tiangolo.com), [LangGraph](https://github.com/langchain-ai/langgraph)                                                                                                | REST/streaming entrypoints, **stateful** agent graphs: SQL path, RAG path, and synthesis.                                                  |
+| **Data**                        | [SQLAlchemy](https://www.sqlalchemy.org) 2, [Alembic](https://alembic.sqlalchemy.org)                                                                                                          | Models and migrations; targets **Render PostgreSQL 16 + pgvector**.                                                                        |
+| **AI (split responsibilities)** | **o3-mini** (SQL), **Claude 3.5 Sonnet** (synthesis)                                                                                                                                           | o3-mini produces **read-only** SQL from schema + question; Sonnet fuses **tabular results** and **retrieved chunks** into final narrative. |
+| **Shared Python**               | `packages/ai-core` (`aequitas_ai`)                                                                                                                                                             | Prompts (`prompts/`), graph **state** (`agents/state.py`), future LangGraph **nodes** here.                                                |
+| **Shared database**             | `packages/database` (`aequitas_database`)                                                                                                                                                      | Schemas, **Alembic** migrations, async session helpers.                                                                                    |
 
 ### Request flow (conceptual)
 
@@ -46,14 +45,14 @@ flowchart LR
   API --> UI
 ```
 
-- **Supabase in production:** point `DATABASE_URL` / `SYNC_DATABASE_URL` at the Supabase **connection string**; keep **pgvector** enabled for the same migration story as local Docker.
+- **Render PostgreSQL in production:** point `DATABASE_URL` / `SYNC_DATABASE_URL` at the Render PostgreSQL **connection string**; keep the **pgvector** extension enabled for the RAG migration story.
 
 ### Hybrid execution pipeline (dashboard, default)
 
-1. **Intent:** user question in the command bar (**Hybrid insight**).  
-2. **SQL graph:** Architect → Validator (lint / forbidden DML) → read-only `SELECT` (execute).  
-3. **RAG:** optional Supabase `match_rag_chunks` (or your RPC) when `SUPABASE_URL` + service key and embeddings are set.  
-4. **Synthesis:** narrative with mandatory **sources** (SQL + document metadata) and a trend keyword tie-in to RAG text where applicable.  
+1. **Intent:** user question in the command bar (**Hybrid insight**).
+2. **SQL graph:** Architect → Validator (lint / forbidden DML) → read-only `SELECT` (execute).
+3. **RAG:** direct Postgres `pgvector` retrieval against `document_embeddings` when embeddings are set.
+4. **Synthesis:** narrative with mandatory **sources** (SQL + document metadata) and a trend keyword tie-in to RAG text where applicable.
 5. **Audit:** an `audit_logs` row is opened and completed for each stream; **Thumbs** use `human_feedback` when the BFF is enabled.
 
 **Compare periods** uses the same DB but the **Temporal** LangGraph over WebSocket (with **Postgres checkpointer** when `USE_POSTGRES_CHECKPOINTER` is true and the DB is reachable; otherwise in-memory). On Windows, the API sets a **selector event loop** so `psycopg` works with the LangGraph Postgres checkpointer.
@@ -66,7 +65,7 @@ flowchart LR
 │   ├── web/
 │   │   ├── app/             # dashboard, research, alerts, portfolio, debate, reports, admin
 │   │   ├── components/      # dashboard, charts, ai, ui
-│   │   └── lib/             # api adapters, hooks, streams/ws, supabase
+│   │   └── lib/             # api adapters, hooks, streams/ws
 │   └── server/
 │       ├── app/             # routers, auth, graph registry, services, rbac
 │       ├── api/             # ingest + debate orchestration
@@ -144,7 +143,7 @@ cd apps\server
 uvicorn app.main:app --reload --port 8000
 ```
 
-- Health: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)  
+- Health: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 - Copy `apps\server\.env.example` to `.env` and set API keys and model names as you wire providers.
 
 ## Frontend
@@ -157,7 +156,7 @@ npm install
 npm run dev
 ```
 
-- App: [http://127.0.0.1:3000](http://127.0.0.1:3000)  
+- App: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 - **shadcn/ui:** run `npx shadcn@latest add <component>` inside `apps/web` to add components to `components/ui/`.
 
 ## Model routing
@@ -171,11 +170,11 @@ Wire your provider clients (OpenAI, Anthropic, or unified gateways) in the LangG
 
 ## GitHub Actions
 
-- **[`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml)** — `push` / `pull_request` on `main`: Prettier + ESLint on `apps/web`, `pip install -r requirements-local.txt` + `testing_suite` deps, `pytest`, faithfulness demo script, optional DeepEval when **`OPENAI_API_KEY`** (and for full RAG tests, Supabase secrets as configured) is present.  
+- **[`.github/workflows/ai-pipeline.yml`](.github/workflows/ai-pipeline.yml)** — `push` / `pull_request` on `main`: Prettier + ESLint on `apps/web`, `pip install -r requirements-local.txt` + `testing_suite` deps, `pytest`, faithfulness demo script, optional DeepEval when **`OPENAI_API_KEY`** is present.
 - **[`.github/workflows/github-action.yml`](.github/workflows/github-action.yml)** — additional secret scan and builds on a broader set of branches; keep in sync with your branch strategy.
 - **[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)** — automated deployment pipeline for Cloudflare Pages (frontend via Git integration) and Cloudflare Workers (backend), including smoke checks.
 
-**Secrets (AI eval job):** add **`OPENAI_API_KEY`**; optionally **`SUPABASE_URL`** and **`SUPABASE_SERVICE_KEY`** for tests that call vector RPCs.
+**Secrets (AI eval job):** add **`OPENAI_API_KEY`**.
 
 ## Automated Cloudflare deploy
 
@@ -196,4 +195,4 @@ Cutover checklist: [`docs/cloudflare-cutover-checklist.md`](docs/cloudflare-cuto
 
 ---
 
-*Internal codename: Aequitas FI — hybrid financial intelligence stack.*
+_Internal codename: Aequitas FI — hybrid financial intelligence stack._

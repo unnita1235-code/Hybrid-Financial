@@ -1,4 +1,9 @@
-# Deployment Runbook (Cloudflare Pages + Workers)
+# Deployment Runbook (Cloudflare Pages + Workers) — LEGACY
+
+> **Superseded target:** the active deployment architecture is **Vercel**
+> (Next.js frontend + BFF) and **Render** (FastAPI + PostgreSQL); see
+> `docs/first-party-auth.md`, `render.yaml`, and `vercel.json`. The Cloudflare
+> procedure below is retained for history only.
 
 This runbook describes production deployment using Cloudflare Pages (frontend) and Cloudflare Workers (API), with GitHub Actions quality gates, smoke checks, and rollback guidance.
 
@@ -30,8 +35,7 @@ Add these secrets in each environment before running deploy:
   - `FRONTEND_URL` (Cloudflare Pages production URL)
   - `BACKEND_URL` (Cloudflare Worker API URL)
 - Frontend runtime config:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  - `AEQUITAS_API_URL` (Render FastAPI service URL, used by the Next.js BFF)
 - Migration bridge (optional but recommended while porting endpoints):
   - `UPSTREAM_API_BASE` (legacy Python API URL, used by Worker pass-through)
 
@@ -43,9 +47,8 @@ Set backend environment variables in Cloudflare Worker settings:
 - `SYNC_DATABASE_URL`
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
-- `SUPABASE_JWT_SECRET`
+- `ALLOW_PUBLIC_REGISTRATION` (`false` in production)
+- `SESSION_LIFETIME_HOURS`
 - `APP_ENV=production`
 - `ENVIRONMENT=production`
 
@@ -99,6 +102,6 @@ Checks include:
 
 - Repository root [`vercel.json`](../vercel.json) runs `npm ci`, `npm run build:web`, and sets **`outputDirectory`** to `apps/web/.next` so Vercel finds the Next build output from the workspace package. The root [`package.json`](../package.json) includes a **`next`** devDependency so Vercel can detect the framework at the repo root (the app remains [`apps/web`](../apps/web)).
 - Optionally set **Settings → General → Root Directory** to `apps/web` and simplify config; or run `npm run deploy:vercel:patch-root` with `VERCEL_TOKEN` (see [`scripts/deploy/vercel-patch-root-directory.js`](../scripts/deploy/vercel-patch-root-directory.js)).
-- Set the same public env vars as Cloudflare Pages (`NEXT_PUBLIC_AEQUITAS_API_URL`, `AEQUITAS_API_URL`, Supabase keys) in Vercel **Settings → Environment Variables**.
+- Set the same public env vars as Cloudflare Pages (`NEXT_PUBLIC_AEQUITAS_API_URL`, `AEQUITAS_API_URL`) in Vercel **Settings → Environment Variables**.
 - Deploy: `npm run deploy:vercel:prod` from the repo root (requires `npx vercel link` once). After deploy, run `npm run deploy:verify:production` with `FRONTEND_URL` and `BACKEND_URL` set.
 - **GitHub Actions**: [`.github/workflows/vercel-frontend.yml`](../.github/workflows/vercel-frontend.yml) deploys on push to `main` when web or lockfile changes. Add repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` (from the Vercel project **Settings → General**).

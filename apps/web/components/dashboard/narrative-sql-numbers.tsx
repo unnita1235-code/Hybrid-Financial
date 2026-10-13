@@ -52,7 +52,7 @@ export function NarrativeWithSqlTooltips({
           <span
             onPointerDown={onNumberPointerDown}
             className={cn(
-              "font-numeric cursor-help border-b border-dotted border-cyan-500/50 text-[0.95em] tabular-nums text-cyan-100/95",
+              "font-numeric cursor-help border-b border-dotted border-primary/50 text-[0.95em] tabular-nums text-primary",
             )}
           >
             {p.v}
@@ -60,12 +60,12 @@ export function NarrativeWithSqlTooltips({
         </TooltipTrigger>
         <TooltipContent
           side="top"
-          className="max-w-lg font-mono text-[10px] leading-relaxed text-slate-200"
+          className="max-w-lg font-mono text-[10px] leading-relaxed"
         >
-          <p className="mb-1 text-[9px] uppercase tracking-widest text-slate-500">
+          <p className="mb-1 text-[9px] uppercase tracking-widest text-muted-foreground">
             Source query (read-only)
           </p>
-          <pre className="whitespace-pre-wrap break-words text-slate-300">{sql}</pre>
+          <pre className="whitespace-pre-wrap break-words text-foreground">{sql}</pre>
         </TooltipContent>
       </Tooltip>
     );

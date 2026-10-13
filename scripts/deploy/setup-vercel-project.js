@@ -28,9 +28,6 @@ function requiredFrontendEnv() {
   return [
     "NEXT_PUBLIC_AEQUITAS_API_URL",
     "AEQUITAS_API_URL",
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   ];
 }
 

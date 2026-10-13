@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import math
 import time
 from collections import deque
 from dataclasses import dataclass
 
-import jwt
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -71,11 +71,12 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _identity_key(self, request: Request) -> str:
+        # Bucket authenticated callers by a hash of their opaque session token
+        # (never decoded or logged); everyone else shares a per-IP bucket.
         token = self._bearer_token(request)
         if token:
-            sub = self._sub_from_jwt(token)
-            if sub:
-                return f"user:{sub}"
+            digest = hashlib.sha256(token.encode("utf-8")).hexdigest()[:32]
+            return f"token:{digest}"
         return f"ip:{self._client_ip(request)}"
 
     @staticmethod
@@ -84,27 +85,6 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         if not auth_header or not auth_header.lower().startswith("bearer "):
             return None
         return auth_header[7:].strip() or None
-
-    @staticmethod
-    def _sub_from_jwt(token: str) -> str | None:
-        try:
-            payload = jwt.decode(
-                token,
-                settings.supabase_jwt_secret or "",
-                algorithms=["HS256"],
-                options={"verify_signature": bool(settings.supabase_jwt_secret)},
-            )
-        except jwt.PyJWTError:
-            try:
-                payload = jwt.decode(
-                    token,
-                    options={"verify_signature": False},
-                    algorithms=["HS256"],
-                )
-            except jwt.PyJWTError:
-                return None
-        sub = payload.get("sub")
-        return str(sub) if sub else None
 
     @staticmethod
     def _client_ip(request: Request) -> str:

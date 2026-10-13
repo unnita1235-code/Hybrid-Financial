@@ -1,6 +1,8 @@
 "use client";
 
 import { ChevronRight, Database } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type MetricCardProps = {
@@ -21,33 +23,35 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <button
-      type="button"
-      onClick={onOpenContext}
+    <Card
+      // button semantics preserved via nested button for a11y; whole card is clickable
       className={cn(
-        "group w-full text-left",
-        "glass-terminal rounded-lg",
-        "px-5 py-4 transition hover:border-primary/30 hover:bg-primary/5 hover:shadow-lg",
-        "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-0",
-        "border border-border/50",
+        "group w-full p-0 text-left transition hover:border-primary/30 hover:bg-primary/5",
+        "focus-within:ring-2 focus-within:ring-ring/20",
         className,
       )}
     >
+      <button
+        type="button"
+        onClick={onOpenContext}
+        className="block w-full rounded-lg px-5 py-4 text-left focus:outline-none"
+        aria-label={`${label}: ${value}. Open narrative context.`}
+      >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {label}
           </p>
-          <p className="mt-1 font-numeric text-3xl font-bold tabular-nums text-foreground">
+          <p className="mt-1 font-numeric text-3xl font-semibold tabular-nums tracking-tight text-foreground">
             {value}
           </p>
           {sublabel && <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>}
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           {isLive && (
-            <span className="rounded-sm border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            <Badge variant="primary" className="uppercase tracking-wider">
               SQL
-            </span>
+            </Badge>
           )}
           <span
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary"
@@ -58,9 +62,10 @@ export function MetricCard({
         </div>
       </div>
       <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <Database className="h-3.5 w-3.5" strokeWidth={2} />
+        <Database className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
         <span>Metric from query · open narrative context</span>
       </div>
-    </button>
+      </button>
+    </Card>
   );
 }

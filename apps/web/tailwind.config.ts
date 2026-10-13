@@ -48,9 +48,22 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        critical: "hsl(var(--critical))",
+        surface: {
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-sora)", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-geist-sans)",
+          "var(--font-sora)",
+          "system-ui",
+          "sans-serif",
+        ],
         mono: ["var(--font-inter)", "ui-monospace", "monospace"],
         numeric: [
           "var(--font-jetbrains-mono)",

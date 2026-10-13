@@ -90,6 +90,6 @@ def assert_sql_rbac(
         detail=(
             "This query would access executive-only tables "
             f"({', '.join(sorted(exec_needing))}). "
-            "Request access with an executive or admin role (Clerk / Supabase / RBAC)."
+            "Request access with an executive or admin role."
         ),
     )

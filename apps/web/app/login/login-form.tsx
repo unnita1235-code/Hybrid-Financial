@@ -2,8 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 function isSafeNext(next: string | undefined, fallback: string) {
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
@@ -23,37 +21,47 @@ export function LoginForm({ defaultNext }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [mode, setMode] = useState<"signin" | "register">("signin");
+
   const next = isSafeNext(defaultNext, "/");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!isSupabaseConfigured()) {
-      setError("Supabase is not configured. Set .env.local variables.");
-      return;
-    }
     setSubmitting(true);
-    const supabase = getSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    setSubmitting(false);
-    if (signInError) {
-      setError(signInError.message);
-      return;
+    try {
+      const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      if (!res.ok) {
+        let message = "Request failed. Try again.";
+        try {
+          const data = (await res.json()) as { error?: string; detail?: string };
+          if (typeof data.error === "string" && data.error) message = data.error;
+          else if (typeof data.detail === "string" && data.detail)
+            message = data.detail;
+        } catch {
+          // keep generic message
+        }
+        setError(message);
+        return;
+      }
+      if (mode === "register") {
+        // Registration creates the account without signing in; sign in next.
+        setMode("signin");
+        setError(null);
+        return;
+      }
+      router.replace(next);
+      router.refresh();
+    } catch {
+      setError("Request failed. Try again.");
+    } finally {
+      setSubmitting(false);
     }
-    router.replace(next);
-    router.refresh();
-  }
-
-  if (!isSupabaseConfigured()) {
-    return (
-      <p className="text-sm text-slate-400">
-        Set <code className="text-cyan-400/90">NEXT_PUBLIC_SUPABASE_URL</code> and a
-        publishable or anon key in <code className="text-cyan-400/90">.env.local</code>.
-      </p>
-    );
   }
 
   return (
@@ -98,7 +106,26 @@ export function LoginForm({ defaultNext }: Props) {
         disabled={submitting}
         className="w-full rounded-md border border-white/15 bg-zinc-900/80 py-2 text-sm font-medium text-slate-100 transition hover:bg-zinc-800 disabled:opacity-50"
       >
-        {submitting ? "Signing in…" : "Sign in"}
+        {submitting
+          ? mode === "register"
+            ? "Creating account…"
+            : "Signing in…"
+          : mode === "register"
+            ? "Create account"
+            : "Sign in"}
+      </button>
+      <button
+        type="button"
+        disabled={submitting}
+        onClick={() => {
+          setMode(mode === "register" ? "signin" : "register");
+          setError(null);
+        }}
+        className="w-full py-1 text-center text-xs text-slate-500 transition hover:text-slate-300 disabled:opacity-50"
+      >
+        {mode === "register"
+          ? "Already have an account? Sign in"
+          : "Need an account? Create one"}
       </button>
     </form>
   );

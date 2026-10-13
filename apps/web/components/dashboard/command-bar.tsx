@@ -4,6 +4,10 @@ import Link from "next/link";
 import { FileText, Mic, MicOff, Search } from "lucide-react";
 import { useCallback, useState } from "react";
 import { RealitySimulationToggle } from "@/components/dashboard/reality-simulation-toggle";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useVoiceInput } from "@/lib/hooks/use-voice-input";
 import { cn } from "@/lib/utils";
 
@@ -57,31 +61,35 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
   return (
     <div
       className={cn(
-        "border-b border-border/50 glass-terminal border-x-0 border-t-0 bg-background/80 px-4 py-4",
+        "border-b border-border/50 bg-background px-4 py-4",
         className,
       )}
     >
       <form
-        className="mx-auto flex max-w-3xl flex-col gap-3"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="sr-only">Agent mode (reality only)</span>
+          <Badge variant={!simulation && agentMode === "hybrid" ? "primary" : "default"}>
+            {simulation ? "Hybrid insight (simulation forces hybrid)" : agentMode === "hybrid" ? "Insight Mode" : "Compare Scenarios"}
+          </Badge>
           <button
             type="button"
             disabled={isBusy || simulation}
             onClick={() => setAgentMode("hybrid")}
             className={cn(
-              "rounded-lg border px-3 py-1.5 transition font-medium",
+              "rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20",
               !simulation && agentMode === "hybrid"
                 ? "border-primary/40 bg-primary/15 text-primary"
                 : "border-border/40 bg-card text-muted-foreground hover:border-border/60 hover:text-foreground",
               (isBusy || simulation) && "opacity-50",
             )}
             title="Architect → SQL + vector RAG + synthesis"
+            aria-pressed={agentMode === "hybrid"}
           >
             Hybrid insight
           </button>
@@ -90,37 +98,40 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
             disabled={isBusy || simulation}
             onClick={() => setAgentMode("temporal")}
             className={cn(
-              "rounded-lg border px-3 py-1.5 transition font-medium",
+              "rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20",
               !simulation && agentMode === "temporal"
                 ? "border-primary/40 bg-primary/15 text-primary"
                 : "border-border/40 bg-card text-muted-foreground hover:border-border/60 hover:text-foreground",
               (isBusy || simulation) && "opacity-50",
             )}
             title="Two-period SQL + delta + targeted RAG (WebSocket)"
+            aria-pressed={agentMode === "temporal"}
           >
             Compare
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <Card className="p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <RealitySimulationToggle
             simulation={simulation}
             onChange={setSimulation}
             disabled={isBusy}
-            className="shrink-0 border border-border/50 bg-card"
+            className="shrink-0"
           />
           <Link
             href="/reports"
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-card px-3 py-2 font-sans text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border/50 bg-card px-3 py-2 font-sans text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground transition hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
           >
-            <FileText className="h-4 w-4" strokeWidth={2} />
+            <FileText className="h-4 w-4" strokeWidth={2} aria-hidden />
             Reports
           </Link>
           <div className="relative min-w-0 flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               strokeWidth={2}
+              aria-hidden
             />
-            <input
+            <Input
               value={v}
               onChange={(e) => setV(e.target.value)}
               disabled={isBusy}
@@ -129,58 +140,57 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
                   ? "SQL agent question (e.g. TTM revenue from transactions)…"
                   : "Ask in natural language — run SQL, then RAG context streams in…"
               }
-              className={cn(
-                "w-full rounded-lg border border-border/50 bg-card py-2.5 pl-10 pr-4",
-                "font-sans text-sm text-foreground placeholder:text-muted-foreground",
-                "outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/30",
-                "disabled:opacity-50",
-              )}
-              aria-label="Command search"
+              className="w-full py-2.5 pl-10 pr-4"
+              aria-label="Natural language query"
               autoComplete="off"
             />
           </div>
-          <button
+          <div className="flex shrink-0 items-center gap-2">
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={voice.start}
             disabled={!voice.supported || isBusy || voice.state === "listening"}
-            className="shrink-0 rounded-lg border border-border/50 bg-card px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground hover:border-primary/40 disabled:opacity-40"
             title="Start voice input"
+            aria-label="Start voice input"
+            className="px-2.5"
           >
-            <Mic className="h-4 w-4" />
-          </button>
-          <button
+            <Mic className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => {
               voice.stop();
               applyTranscript();
             }}
             disabled={voice.state !== "listening"}
-            className="shrink-0 rounded-lg border border-border/50 bg-card px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground hover:border-primary/40 disabled:opacity-40"
-            title="Stop voice input"
+            title="Stop voice input and insert transcript"
+            aria-label="Stop voice input"
+            className="px-2.5"
           >
-            <MicOff className="h-4 w-4" />
-          </button>
-          <button
+            <MicOff className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
             type="submit"
             disabled={!canSubmit}
-            className="shrink-0 rounded-lg border border-primary/50 bg-primary px-4 py-2.5 text-xs font-semibold tracking-wide text-primary-foreground transition hover:bg-primary/90 hover:border-primary disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[44px] px-4"
           >
             {isBusy ? "Running…" : "Run"}
-          </button>
+          </Button>
+          </div>
         </div>
+        </Card>
         {simulation && (
           <div className="w-full min-w-0">
-            <input
+            <Input
               value={whatIf}
               onChange={(e) => setWhatIf(e.target.value)}
               disabled={isBusy}
               placeholder='What if… (e.g. "material costs increase 15% next quarter")'
-              className={cn(
-                "w-full rounded-lg border-2 border-warning/40 bg-card py-2.5 px-4",
-                "font-sans text-sm text-foreground placeholder:text-muted-foreground",
-                "outline-none focus:border-warning/60 focus:ring-2 focus:ring-warning/30",
-                "disabled:opacity-50",
-              )}
+              className="w-full border-warning/40 focus-visible:border-warning/60 focus-visible:ring-warning/20"
               aria-label="What-if scenario"
               autoComplete="off"
             />
@@ -191,7 +201,7 @@ export function CommandBar({ onRun, isBusy, className }: CommandBarProps) {
           </div>
         )}
         {voice.error && (
-          <p className="text-[11px] text-destructive font-medium">
+          <p className="text-[11px] font-medium text-destructive" role="alert">
             {voice.error} Voice features fallback to typed input.
           </p>
         )}

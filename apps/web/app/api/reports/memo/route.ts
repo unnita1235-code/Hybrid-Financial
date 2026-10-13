@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBackendUrl, mergeRequestAuth } from "@/lib/aequitas-api";
+import {
+  getBackendUrl,
+  isSameOriginRequest,
+  sessionAuthHeaders,
+} from "@/lib/aequitas-api";
 import type { MemoReportRequest } from "@/lib/memo-reports";
 
 export async function POST(req: NextRequest) {
+  if (!isSameOriginRequest(req)) {
+    return NextResponse.json(
+      { error: "Cross-origin request refused." },
+      { status: 403 },
+    );
+  }
+  const { headers, authenticated } = sessionAuthHeaders(req);
+  if (!authenticated) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
   const body = (await req.json().catch(() => ({}))) as Partial<MemoReportRequest>;
   if (
     typeof body.start_date !== "string" ||
@@ -19,7 +33,7 @@ export async function POST(req: NextRequest) {
   const base = getBackendUrl();
   const r = await fetch(`${base}/v1/reports/memo`, {
     method: "POST",
-    headers: mergeRequestAuth(req, { "Content-Type": "application/json" }),
+    headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify({
       start_date: body.start_date,
       end_date: body.end_date,

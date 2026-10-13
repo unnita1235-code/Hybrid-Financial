@@ -1,17 +1,21 @@
-"""Resolve user id + app role from Clerk, Supabase Auth, or dev headers."""
+"""Resolve user identity from first-party opaque session tokens.
+
+Sessions are issued by ``POST /v1/auth/login`` and validated against
+PostgreSQL on every request (see ``app.auth.sessions``). There are no
+external identity providers, no JWT verification, and no header-asserted
+development identities: missing, malformed, unknown, expired, revoked, or
+inactive-user sessions fail closed with 401. Roles always come from the
+stored user row.
+"""
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
-import jwt
-from fastapi import Depends, HTTPException, Request
-from jwt import PyJWKClient
+from fastapi import HTTPException, Request
 
-from app.config import settings
-
-log = logging.getLogger(__name__)
+from app.auth.sessions import resolve_session
+from app.db import get_session_maker
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,96 +25,23 @@ class Identity:
     email: str | None = None
 
 
-def _bearer(request: Request) -> str | None:
-    a = request.headers.get("Authorization") or request.headers.get("authorization")
-    if not a or not a.lower().startswith("bearer "):
-        return None
-    return a[7:].strip() or None
-
-
-def _dev_identity(request: Request) -> Identity:
-    role = (request.headers.get("X-User-Role") or "analyst").strip()
-    sub = (request.headers.get("X-User-Id") or "dev-user").strip() or "dev-user"
-    return Identity(sub=sub, role=role or "analyst")
-
-
-def _supabase(token: str) -> Identity:
-    if not settings.supabase_jwt_secret:
-        log.warning("auth_provider=supabase but supabase_jwt_secret is not set; falling back to unverified sub")
-    try:
-        data = jwt.decode(
-            token,
-            settings.supabase_jwt_secret or "",
-            algorithms=["HS256"],
-            options={"verify_signature": bool(settings.supabase_jwt_secret)},
-        )
-    except jwt.PyJWTError as e:  # noqa: BLE001
-        raise HTTPException(status_code=401, detail=f"Invalid Supabase JWT: {e}") from e
-    sub = str(data.get("sub") or "")
-    am = (data.get("app_metadata") or data.get("user_metadata") or {}) or {}
-    if isinstance(am, dict):
-        role = str(am.get("role") or am.get("aequitas_role") or "analyst")
-    else:
-        role = "analyst"
-    return Identity(sub=sub or None, role=role, email=str(data.get("email") or "") or None)
-
-
-def _clerk(token: str) -> Identity:
-    jwks = settings.clerk_jwks_url
-    if not jwks:
-        raise HTTPException(
-            status_code=500,
-            detail="auth_provider=clerk requires CLERK_JWKS_URL (Issuance: Clerk Dashboard → API keys).",
-        )
-    try:
-        jwk_client = PyJWKClient(jwks, cache_jwk_set_by_kid=True)
-        signing = jwk_client.get_signing_key_from_jwt(token)
-        ap = [p.strip() for p in (settings.clerk_authorized_parties or "").split(",") if p.strip()]
-        dec_kw: dict = {
-            "algorithms": ["RS256", "ES256"],
-            "options": {"verify_aud": bool(ap)},
-        }
-        if ap:
-            dec_kw["audience"] = ap[0] if len(ap) == 1 else ap
-        data = jwt.decode(token, signing.key, **dec_kw)
-    except jwt.PyJWTError as e:  # noqa: BLE001
-        raise HTTPException(status_code=401, detail=f"Invalid Clerk session: {e}") from e
-    sub = str(data.get("sub") or "")
-    pub = (data.get("public_metadata") or {}) if isinstance(data.get("public_metadata"), dict) else {}
-    role = str(pub.get("aequitas_role") or pub.get("role") or "analyst")
-    org = (data.get("o") or {}) if isinstance(data.get("o"), dict) else {}
-    if "role" in org and role == "analyst":
-        role = str((org or {}).get("role") or role)
-    return Identity(sub=sub or None, role=role, email=str(data.get("email") or "") or None)
+def _bearer_token(request: Request) -> str:
+    auth = request.headers.get("Authorization") or request.headers.get(
+        "authorization"
+    )
+    if not auth or not auth.lower().startswith("bearer "):
+        return ""
+    return auth[7:].strip()
 
 
 async def get_identity(request: Request) -> Identity:
-    prov = (settings.auth_provider or "dev").lower().strip()
-    token = _bearer(request)
-    if prov in ("", "none", "dev"):
-        return _dev_identity(request)
+    token = _bearer_token(request)
     if not token:
-        return _dev_identity(request)
-    if prov == "supabase":
-        return _supabase(token)
-    if prov == "clerk":
-        return _clerk(token)
-    if settings.supabase_jwt_secret:
-        return _supabase(token)
-    if settings.clerk_jwks_url:
-        return _clerk(token)
-    return _dev_identity(request)
-
-
-def require_role(required_roles: list[str]):
-    async def _require_role_dependency(request: Request) -> Identity:
-        identity = await get_identity(request)
-        allowed_roles = [r.lower() for r in required_roles]
-        if identity.role.lower() not in allowed_roles:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Role '{identity.role}' is not authorized. Required: {required_roles}",
-            )
-        return identity
-
-    return Depends(_require_role_dependency)
+        raise HTTPException(status_code=401, detail="Missing credentials.")
+    sm = get_session_maker()
+    async with sm() as session:
+        found = await resolve_session(session, token)
+    if found is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+    user, _ = found
+    return Identity(sub=str(user.id), role=user.role, email=user.email)
