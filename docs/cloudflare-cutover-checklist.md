@@ -1,4 +1,8 @@
-# Cloudflare Cutover Checklist
+# Cloudflare Cutover Checklist — LEGACY
+
+> **Superseded target:** the active deployment architecture is **Vercel**
+> and **Render** (see `docs/first-party-auth.md`). This checklist is
+> retained for history only.
 
 This checklist is used when moving from legacy Netlify/Render hosting to Cloudflare Pages + Workers.
 

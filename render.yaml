@@ -17,8 +17,6 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: AEQUITAS_API_URL
-        sync: false
       - key: ALLOW_PUBLIC_REGISTRATION
         value: false
       - key: SESSION_LIFETIME_HOURS

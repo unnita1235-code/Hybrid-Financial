@@ -1,4 +1,9 @@
-# Deployment Runbook (Cloudflare Pages + Workers)
+# Deployment Runbook (Cloudflare Pages + Workers) — LEGACY
+
+> **Superseded target:** the active deployment architecture is **Vercel**
+> (Next.js frontend + BFF) and **Render** (FastAPI + PostgreSQL); see
+> `docs/first-party-auth.md`, `render.yaml`, and `vercel.json`. The Cloudflare
+> procedure below is retained for history only.
 
 This runbook describes production deployment using Cloudflare Pages (frontend) and Cloudflare Workers (API), with GitHub Actions quality gates, smoke checks, and rollback guidance.
 

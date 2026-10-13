@@ -27,8 +27,7 @@
     "deploy:verify-live": "node scripts/deploy/verify-live.js",
     "test:postman": "node scripts/deploy/run-postman-newman.js",
     "deploy:vercel:prod": "npx vercel deploy --prod --yes",
-    "deploy:verify:production": "node scripts/deploy/post-deploy-verify.js",
-    "deploy:worker": "npm run deploy -w @aequitas/api-worker"
+    "deploy:verify:production": "node scripts/deploy/post-deploy-verify.js"
   },
   "devDependencies": {
     "newman": "^6.2.2",
