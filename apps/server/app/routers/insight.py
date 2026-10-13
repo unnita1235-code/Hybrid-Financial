@@ -16,8 +16,7 @@ from typing import Any
 from uuid import UUID
 
 from aequitas_ai import (
-    SupabaseRagConfig,
-    SupabaseRagRetriever,
+    PostgresRagRetriever,
     build_hybrid_sources,
     run_hybrid_synthesis,
 )
@@ -241,22 +240,15 @@ async def _stream_events(
 
     emb: list[float] | None = None
     chunks: list[dict[str, Any]] = []
-    if (
-        settings.openai_api_key
-        and settings.supabase_url
-        and settings.supabase_service_key
-    ):
+    if settings.openai_api_key:
         try:
+            from app.db import get_session_maker
+
             oemb = OpenAIEmbeddings(
                 model=settings.embedding_model, api_key=settings.openai_api_key
             )
             emb = await oemb.aembed_query(uq)
-            ret = SupabaseRagRetriever(
-                config=SupabaseRagConfig(
-                    supabase_url=settings.supabase_url,
-                    supabase_key=settings.supabase_service_key,
-                )
-            )
+            ret = PostgresRagRetriever(session_factory=get_session_maker())
             chunks = await ret.retrieve(emb, match_count=_max_rag)
         except Exception:  # noqa: BLE001
             chunks = []

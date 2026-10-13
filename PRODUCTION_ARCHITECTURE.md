@@ -5,7 +5,7 @@ aequitas-fi/
 ├── apps/
 │   ├── web/                          # Next.js 14 App Router
 │   │   ├── app/
-│   │   │   ├── (auth)/               # Supabase/Clerk auth group
+│   │   │   ├── (auth)/               # first-party session auth (BFF cookie + opaque tokens)
 │   │   │   ├── dashboard/            # Main financial dashboard
 │   │   │   ├── research/             # Deep research page (new)
 │   │   │   ├── alerts/               # Shadow analyst notifications (new)
@@ -20,7 +20,7 @@ aequitas-fi/
 │   │   │   └── ui/                   # shadcn/ui
 │   │   └── lib/
 │   │       ├── api/                  # Typed API clients
-│   │       ├── supabase/
+│   │       ├── auth-cookie.ts        # session cookie helpers
 │   │       └── hooks/                # React hooks for WS, SSE
 │   │
 │   └── server/                       # FastAPI + LangGraph
@@ -28,7 +28,7 @@ aequitas-fi/
 │       │   ├── main.py               # Lifespan: engine, graphs, scheduler
 │       │   ├── config.py             # Pydantic settings (env-driven)
 │       │   ├── auth/
-│       │   │   ├── identity.py       # JWT verify (Supabase HS256 or Clerk RS256)
+│       │   │   ├── identity.py       # opaque session lookup against PostgreSQL
 │       │   │   └── guards.py         # FastAPI Depends: require_role()
 │       │   ├── graph/
 │       │   │   ├── registry.py       # Central graph registry (NEW)

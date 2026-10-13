@@ -24,8 +24,6 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     llamaparse_api_key: str | None = None
     # LlamaCloud also reads LLAMA_CLOUD_API_KEY; we map from llamaparse_api_key in code
-    supabase_url: str | None = None
-    supabase_service_key: str | None = None
     embedding_model: str = "text-embedding-3-small"
     vision_provider: str = "openai"  # openai | anthropic
     vision_openai_model: str = "gpt-4o"
@@ -33,14 +31,11 @@ class Settings(BaseSettings):
     debate_bull_bear_model: str = "claude-3-5-sonnet-20241022"
     debate_w1: float = 0.5
     debate_w2: float = 0.5
-    # Auth / RBAC: none | dev | supabase | clerk
-    # dev: trust X-User-Id, X-User-Role (local + integration tests)
-    # supabase: HS256 with SUPABASE_JWT_SECRET; role in app_metadata.role
-    # clerk: RS256 via Clerk JWKS; role in public_metadata["aequitas_role"] or o.claims
-    auth_provider: str = "supabase"
-    supabase_jwt_secret: str | None = None
-    clerk_jwks_url: str | None = None
-    clerk_authorized_parties: str = ""
+    # First-party session auth (opaque tokens validated against PostgreSQL).
+    # Registration is server-gated: deployments that must stay closed set
+    # ALLOW_PUBLIC_REGISTRATION=false. New users always receive analyst.
+    allow_public_registration: bool = True
+    session_lifetime_hours: int = 24
     # Comma list; empty → executive, admin, superuser
     rbac_elevated_roles: str = ""
     # Comma list of SQL table names (no schema); empty → salaries, m_and_a_plans

@@ -2,6 +2,9 @@
 
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { RagChunkSummary, TransparencyPayload } from "@/lib/insight-stream";
 import { cn } from "@/lib/utils";
 
@@ -59,12 +62,19 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
   };
 
   return (
-    <div className="glass-terminal mb-4 space-y-4 rounded-lg border border-border/50 p-4 pb-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        Transparency
-      </p>
+    <Card className="mb-4 space-y-4 p-4 pb-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Transparency
+        </p>
+        {auditId ? (
+          <Badge variant="verified" title={`audit ${auditId}`}>
+            audit {auditId.slice(0, 8)}…
+          </Badge>
+        ) : null}
+      </div>
       <p className="text-xs text-muted-foreground">
-        Provenance of this run{auditId ? ` · audit ${auditId.slice(0, 8)}…` : ""}
+        Provenance of this run
       </p>
       {data && (
         <>
@@ -112,38 +122,32 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
           Was this response helpful? (feeds few-shot data)
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant={submitted === "up" ? "default" : "secondary"}
+            size="sm"
             disabled={!auditId || disabled || voteBusy || submitted !== null}
             onClick={() => void handle(1)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
-              submitted === "up"
-                ? "border-success/50 text-success"
-                : "border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-primary/5",
-            )}
             aria-label="Thumbs up"
+            className={cn(submitted === "up" && "border-success/50")}
           >
             <ThumbsUp className="h-4 w-4" strokeWidth={2} />
-            Up
-          </button>
-          <button
+            Yes
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={!auditId || disabled || voteBusy || submitted !== null}
             onClick={() =>
               downOpen && correction.trim() ? void handle(-1) : setDownOpen(true)
             }
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
-              submitted === "down"
-                ? "border-warning/50 text-warning"
-                : "border-border/50 text-muted-foreground hover:border-warning/40 hover:text-foreground hover:bg-warning/5",
-            )}
             aria-label="Thumbs down"
+            className={cn(submitted === "down" && "border-warning/50 text-warning")}
           >
             <ThumbsDown className="h-4 w-4" strokeWidth={2} />
-            Down
-          </button>
+            Flag discrepancy
+          </Button>
         </div>
         {downOpen && submitted === null && (
           <div className="mt-3 space-y-2">
@@ -155,25 +159,26 @@ export function TransparencySection({ data, auditId, onFeedback, disabled }: Pro
               value={correction}
               onChange={(e) => setCorrection(e.target.value)}
               rows={3}
-              className="w-full resize-y rounded-lg border border-border/50 bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground"
+              className="w-full resize-y rounded-md border border-input bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
               placeholder="Correct figures, missing risk factors, or preferred wording for prompt tuning"
             />
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               disabled={!correction.trim() || voteBusy}
               onClick={() => void handle(-1)}
-              className="text-xs text-slate-400 underline hover:text-slate-200"
             >
               Submit correction
-            </button>
+            </Button>
           </div>
         )}
         {submitted && (
-          <p className="mt-2 text-[10px] text-slate-600">
+          <p className="mt-2 text-[10px] text-muted-foreground">
             Thanks — saved for few-shot review.
           </p>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

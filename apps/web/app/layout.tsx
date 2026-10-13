@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Sora, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Inter, JetBrains_Mono, Sora } from "next/font/google";
 import Link from "next/link";
 import { AlertBadge } from "@/components/alerts/alert-badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Providers } from "./providers";
 import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 const soraSans = Sora({
   variable: "--font-sora",
@@ -36,20 +42,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${soraSans.variable} ${interMono.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
+        className={`${geistSans.variable} ${soraSans.variable} ${interMono.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans text-foreground selection:bg-primary/20 selection:text-foreground`}
       >
         <Providers>
           <div className="flex min-h-screen flex-col bg-background">
             <header className="glass-terminal sticky top-0 z-40 border-x-0 border-t-0 border-b border-border/50 bg-background/95 px-4 py-3">
-              <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between">
-                <div className="flex items-center gap-6">
+              <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-6">
                   <Link
                     href="/"
-                    className="font-sans text-sm font-bold uppercase tracking-[0.12em] text-foreground"
+                    className="shrink-0 font-sans text-sm font-bold uppercase tracking-[0.12em] text-foreground"
                   >
                     Aequitas FI
                   </Link>
-                  <nav className="flex items-center gap-1">
+                  <nav aria-label="Primary" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&>a]:shrink-0">
                     <Link
                       href="/"
                       className="rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
@@ -82,7 +88,7 @@ export default function RootLayout({
                     </Link>
                   </nav>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <ThemeToggle />
                   <AlertBadge />
                 </div>

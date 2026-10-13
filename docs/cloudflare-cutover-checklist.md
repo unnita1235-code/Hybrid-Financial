@@ -11,15 +11,15 @@ This checklist is used when moving from legacy Netlify/Render hosting to Cloudfl
   - Build command: `npm ci && npm run build:web`
 - Set Pages environment variables:
   - `NEXT_PUBLIC_AEQUITAS_API_URL`
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  - `AEQUITAS_API_URL`
 - Create Worker from `apps/api-worker/wrangler.jsonc`.
 - Set Worker secrets/vars:
   - `OPENAI_API_KEY`
   - `ANTHROPIC_API_KEY`
-  - `SUPABASE_URL`
-  - `SUPABASE_SERVICE_KEY`
-  - `SUPABASE_JWT_SECRET`
+  - `DATABASE_URL`
+  - `SYNC_DATABASE_URL`
+  - `ALLOW_PUBLIC_REGISTRATION`
+  - `SESSION_LIFETIME_HOURS`
   - `DATABASE_URL`
   - `SYNC_DATABASE_URL`
   - Optional migration bridge: `UPSTREAM_API_BASE`

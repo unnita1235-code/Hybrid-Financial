@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from api.ingest import router as ingest_router
-from app.config import settings, Settings
+from app.config import Settings, settings
 from app.graph import (
     GraphRegistry,
     get_alert_triage_graph,
@@ -28,6 +28,7 @@ from app.routers import health
 from app.routers.admin import router as admin_router
 from app.routers.alerts import router as alerts_router
 from app.routers.audit import router as audit_router
+from app.routers.auth import router as auth_router
 from app.routers.debate import router as debate_router
 from app.routers.insight import router as insight_router
 from app.routers.portfolio import router as portfolio_router
@@ -66,13 +67,6 @@ def _is_dev_mode() -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_langsmith(settings)
-    if settings.environment in ("staging", "production") and settings.auth_provider == "dev":
-        raise RuntimeError(
-            f"FATAL: auth_provider='dev' is not allowed in environment='{settings.environment}'. "
-            "Set AUTH_PROVIDER=supabase or AUTH_PROVIDER=clerk in your environment."
-        )
-    if not _is_dev_mode() and (settings.auth_provider or "").strip().lower() == "dev":
-        raise RuntimeError("Refusing to start with AUTH_PROVIDER=dev outside dev mode.")
     shared_engine: AsyncEngine | None = None
     app.state.sql_graph = None
     if settings.openai_api_key:
@@ -145,6 +139,7 @@ app.add_middleware(
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(RateLimiterMiddleware)
 app.include_router(health.router, tags=["system"])
+app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ingest_router)
 app.include_router(debate_router)

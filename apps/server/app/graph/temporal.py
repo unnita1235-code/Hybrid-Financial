@@ -1,6 +1,6 @@
 """
 Compile the **TemporalAgent** LangGraph with app settings: OpenAI chat + embeddings,
-read-only SQL against ``settings.database_url``, and optional Supabase vector RAG.
+read-only SQL against ``settings.database_url``, and Postgres vector RAG.
 """
 
 from __future__ import annotations
@@ -9,8 +9,7 @@ from typing import Any
 
 from aequitas_ai import (
     DEFAULT_FINANCIAL_SCHEMA,
-    SupabaseRagConfig,
-    SupabaseRagRetriever,
+    PostgresRagRetriever,
     TemporalAgentConfig,
     build_temporal_agent,
 )
@@ -86,20 +85,9 @@ async def _embed_query(q: str) -> list[float]:
 
 
 def _build_retrieve():
-    if not settings.supabase_url or not settings.supabase_service_key:
-        async def _empty(
-            _emb: list[float], **_kwargs: Any
-        ) -> list[dict[str, Any]]:
-            return []
+    from app.db import get_session_maker
 
-        return _empty
-
-    retriever = SupabaseRagRetriever(
-        config=SupabaseRagConfig(
-            supabase_url=settings.supabase_url,
-            supabase_key=settings.supabase_service_key,
-        )
-    )
+    retriever = PostgresRagRetriever(session_factory=get_session_maker())
 
     async def _retrieve(
         query_embedding: list[float],

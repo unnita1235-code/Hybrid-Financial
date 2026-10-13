@@ -129,9 +129,8 @@ async function run() {
       "SYNC_DATABASE_URL",
       "OPENAI_API_KEY",
       "ANTHROPIC_API_KEY",
-      "SUPABASE_URL",
-      "SUPABASE_SERVICE_KEY",
-      "SUPABASE_JWT_SECRET",
+      "ALLOW_PUBLIC_REGISTRATION",
+      "SESSION_LIFETIME_HOURS",
       "APP_ENV",
       "ENVIRONMENT",
     ];

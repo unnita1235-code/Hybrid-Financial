@@ -1,4 +1,4 @@
-# Local Postgres with pgvector — mirrors Supabase-style SQL + vector workloads.
+# Local Postgres with pgvector — provides local Postgres + pgvector SQL/vector workloads.
 # Start: docker compose up -d
 # Connection (default): postgresql://aequitas:aequitas_dev@localhost:5432/aequitas
 

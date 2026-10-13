@@ -17,12 +17,12 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: SUPABASE_URL
+      - key: AEQUITAS_API_URL
         sync: false
-      - key: SUPABASE_SERVICE_KEY
-        sync: false
-      - key: SUPABASE_JWT_SECRET
-        sync: false
+      - key: ALLOW_PUBLIC_REGISTRATION
+        value: false
+      - key: SESSION_LIFETIME_HOURS
+        value: 24
       - key: APP_ENV
         value: production
       - key: ENVIRONMENT

@@ -36,8 +36,8 @@ class _RunMessage(BaseModel):
 @router.websocket("/ws")
 async def temporal_websocket(websocket: WebSocket) -> None:
     """
-    **Requires** ``OPENAI_API_KEY`` (chat + embeddings). Supabase (``SUPABASE_URL`` +
-    ``SUPABASE_SERVICE_KEY``) is optional for the RAG node.
+    **Requires** ``OPENAI_API_KEY`` (chat + embeddings). Vector RAG reads
+    directly from the application PostgreSQL database.
 
     Client sends a single JSON text frame, e.g.:
     ``{"type":"run","thread_id":"<uuid>","user_query":"..."}``.

@@ -1,6 +1,6 @@
 r"""
 Ingestion pipeline: PDF (LlamaParse / Unstructured / PyMuPDF), chart vision → SQL
-staging, and vector upsert to ``document_embeddings`` (Postgres / Supabase).
+staging, and vector upsert to ``document_embeddings`` (Postgres).
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Literal, cast
 
-import httpx
 from aequitas_database.models.document_embedding import EMBEDDING_DIM, DocumentEmbedding
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
@@ -353,7 +352,7 @@ async def _embed_texts(texts: list[str]) -> list[list[float]]:
 
 
 # ---------------------------------------------------------------------------
-# Vector store: Postgres (upsert) + optional Supabase REST
+# Vector store: Postgres (upsert)
 # ---------------------------------------------------------------------------
 
 
@@ -389,36 +388,6 @@ async def _upsert_postgres(
     return n
 
 
-async def _upsert_supabase_rest(
-    items: list[tuple[uuid.UUID, str, str, list[float], dict[str, Any]]],
-) -> None:
-    if not (settings.supabase_url and settings.supabase_service_key):
-        return
-    base = str(settings.supabase_url).rstrip("/")
-    url = f"{base}/rest/v1/document_embeddings"
-    headers = {
-        "apikey": settings.supabase_service_key,
-        "Authorization": f"Bearer {settings.supabase_service_key}",
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates,return=minimal",
-    }
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        for row_id, source, content, emb, meta in items:
-            payload: dict[str, Any] = {
-                "id": str(row_id),
-                "source": source[:255],
-                "content": content,
-                "chunk_metadata": meta,
-                "embedding": emb,
-            }
-            r = await client.post(
-                f"{url}?on_conflict=id",
-                headers=headers,
-                json=payload,
-            )
-            r.raise_for_status()
-
-
 async def index_chunks(
     chunks: list[IngestChunk],
     *,
@@ -451,10 +420,6 @@ async def index_chunks(
     async with sf() as session:
         async with session.begin():
             n = await _upsert_postgres(session, batch)
-    try:
-        await _upsert_supabase_rest(batch)
-    except httpx.HTTPError as e:  # noqa: BLE001
-        log.warning("Supabase vector mirror failed (Postgres still committed): %s", e)
     return {"chunks": len(chunks), "embedded": len(vectors), "written": n}
 
 

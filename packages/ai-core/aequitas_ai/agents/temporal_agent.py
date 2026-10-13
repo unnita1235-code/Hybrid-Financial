@@ -15,9 +15,10 @@ import asyncio
 import json
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Awaitable, Callable, TypedDict
+from typing import Any, TypedDict
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -89,7 +90,7 @@ class TemporalAgentConfig:
     run_sql: Callable[[str], Awaitable[dict[str, Any]]]
     # Async: semantic query string → embedding vector for vector search.
     embed_query: Callable[[str], Awaitable[list[float]]]
-    # Vector retrieval; use :meth:`SupabaseRagRetriever.retrieve` with time-window kwargs.
+    # Vector retrieval; use :meth:`PostgresRagRetriever.retrieve` with time-window kwargs.
     retrieve: Callable[..., Awaitable[list[dict[str, Any]]]]
     # Schema excerpt for the splitter (table/column names, time columns).
     schema_context: str = ""
@@ -179,7 +180,7 @@ async def _split_sql(
     msg = [SystemMessage(content=SPLITTER_SYSTEM), HumanMessage(content=block)]
     try:
         res = await asyncio.wait_for(llm.ainvoke(msg), timeout=90.0)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         raise RuntimeError("LLM call timed out after 90s") from e
     raw = getattr(res, "content", res)
     if isinstance(raw, list):
@@ -302,7 +303,7 @@ async def _write_narrative(
     msg = [SystemMessage(content=NARRATIVE_SYSTEM), HumanMessage(content=human)]
     try:
         res = await asyncio.wait_for(llm.ainvoke(msg), timeout=90.0)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         raise RuntimeError("LLM call timed out after 90s") from e
     raw = getattr(res, "content", res)
     if isinstance(raw, list):
@@ -421,7 +422,7 @@ def build_temporal_agent(
             }
         t0 = s.get("narrative_window_start") or ""
         t1 = s.get("narrative_window_end") or ""
-        # Pass through to retriever (SupabaseRagRetriever supports time-window kwargs).
+        # Pass through to retriever (PostgresRagRetriever accepts time-window kwargs).
         try:
             chunks = await config.retrieve(
                 emb,

@@ -1,5 +1,5 @@
 """
-RAG pipeline: Supabase Vector retrieval (earnings transcripts, SEC filings) and
+RAG pipeline: Postgres pgvector retrieval (earnings transcripts, SEC filings) and
 hybrid synthesis that combines SQL results with retrieved text.
 
 Responses always attach a :class:`HybridSources` object linking the SQL used and
@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Protocol, TypedDict
+from typing import Any, Protocol, TypedDict
 
-import httpx
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 HYBRID_SYNTHESIS_SYSTEM = """You are a senior sell-side / FP&A research assistant for
 Aequitas FI. You receive (1) tabular or numeric output from a SQL report and
 (2) retrieved passages from **earnings call transcripts** and **SEC filings**
-(vector search over a Supabase/Postgres `pgvector` store).
+(vector search over the application Postgres `pgvector` store).
 
 Narrative rule (mandatory when applicable):
 - **If the SQL result indicates a trend or material change in the numbers
@@ -115,24 +115,18 @@ class HybridRagState(TypedDict, total=False):
 
 
 # ---------------------------------------------------------------------------
-# Supabase Vector retrieval
+# Postgres pgvector retrieval (Render PostgreSQL, direct database access)
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class SupabaseRagConfig:
-    """Client config for :class:`SupabaseRagRetriever`."""
+class PostgresRagConfig:
+    """Client config for :class:`PostgresRagRetriever`."""
 
-    supabase_url: str
-    supabase_key: str
-    # Postgres RPC: (query_embedding, match_count, source_filter) -> setof document rows
-    match_rpc: str = "match_rag_chunks"
-    fts_rpc: str = "match_rag_chunks_fts"
-    rrf_k: int = 60
-    # Metadata keys used to mark transcript vs. SEC — optional filter
-    default_match_count: int = 8
     # Optional: restrict to subpaths of `source` (e.g. "transcript/", "filing/")
     source_prefixes: list[str] | None = field(default=None)
+    default_match_count: int = 8
+    max_match_count: int = 100
 
 
 def merge_rrf(
@@ -157,50 +151,54 @@ def merge_rrf(
 
 
 @dataclass
-class SupabaseRagRetriever:
+class PostgresRagRetriever:
     r"""
-    Semantic search via **Supabase PostgREST** (Vector / ``pgvector``). Calls
-    ``POST {SUPABASE_URL}/rest/v1/rpc/{match_rpc}`` with the project API key.
-    The RPC (default ``match_rag_chunks``) should return JSON rows with at
-    least ``id``, ``source``, ``content``, and ``metadata`` (or
-    ``chunk_metadata``) plus optional ``similarity``. Optional request fields
-    ``metadata_time_start`` and ``metadata_time_end`` (ISO dates) may be used
-    to restrict matches by document metadata; if your RPC ignores them, use
-    :func:`aequitas_ai.agents.filter_chunks_by_metadata_window` on the result.
+    Semantic search directly against PostgreSQL ``pgvector`` (no hosted
+    vector service). Runs cosine-distance search over
+    ``public.document_embeddings`` using the HNSW index.
 
-    Example function (align ``vector(…)`` to your embedding model, e.g. 1536):
+    ``session_factory`` is a zero-argument callable returning an async
+    SQLAlchemy session usable as an async context manager (e.g. an
+    ``async_sessionmaker`` instance). A fresh session is opened per call.
 
-    ```sql
-    create or replace function public.match_rag_chunks(
-      query_embedding vector(1536),
-      match_count int,
-      source_filter text[] default null
-    ) returns setof public.document_embeddings
-    language sql stable as $$
-      select d.*, 1 - (d.embedding <=> query_embedding) as similarity
-      from public.document_embeddings d
-      where d.embedding is not null
-        and (source_filter is null or d.source = any (source_filter))
-      order by d.embedding <-> query_embedding
-      limit match_count
-    $$;
-    ```
+    Returns rows shaped as ``{"id", "source", "content", "chunk_metadata",
+    "distance"}``. Optional ``metadata_time_start`` / ``metadata_time_end``
+    keyword arguments are accepted for interface compatibility and left for
+    callers to enforce via :func:`filter_chunks_by_metadata_window`, matching
+    the previous transport behavior.
     """
 
-    config: SupabaseRagConfig
+    session_factory: Callable[[], Any]
+    config: PostgresRagConfig = field(default_factory=PostgresRagConfig)
 
-    def _rpc_url(self) -> str:
-        base = self.config.supabase_url.rstrip("/")
-        return f"{base}/rest/v1/rpc/{self.config.match_rpc}"
+    def _vector_literal(self, query_embedding: list[float]) -> str:
+        return "[" + ",".join(repr(float(x)) for x in query_embedding) + "]"
 
-    def _rest_headers(self) -> dict[str, str]:
-        k = self.config.supabase_key
+    def _vector_query(self, with_prefixes: bool):  # type: ignore[no-untyped-def]
+        from sqlalchemy import text as sa_text
+
+        prefix_filter = (
+            "AND source = ANY(:prefixes)\n        " if with_prefixes else ""
+        )
+        return sa_text(
+            "SELECT id::text AS id, source, content, chunk_metadata,\n"
+            "       (embedding <=> CAST(:emb AS vector)) AS distance\n"
+            "FROM document_embeddings\n"
+            "WHERE embedding IS NOT NULL\n"
+            f"        {prefix_filter}"
+            "ORDER BY embedding <=> CAST(:emb AS vector)\n"
+            "LIMIT :n"
+        )
+
+    @staticmethod
+    def _normalize_row(mapping: Any) -> dict[str, Any]:
+        meta = mapping.get("chunk_metadata")
         return {
-            "apikey": k,
-            "Authorization": f"Bearer {k}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Prefer": "return=representation",
+            "id": str(mapping.get("id")),
+            "source": str(mapping.get("source") or "unknown"),
+            "content": str(mapping.get("content") or ""),
+            "chunk_metadata": dict(meta) if isinstance(meta, dict) else {},
+            "distance": float(mapping.get("distance") or 0.0),
         }
 
     async def retrieve(
@@ -211,33 +209,22 @@ class SupabaseRagRetriever:
         metadata_time_start: str | None = None,
         metadata_time_end: str | None = None,
     ) -> list[dict[str, Any]]:
-        n = match_count or self.config.default_match_count
-        body: dict[str, Any] = {
-            "query_embedding": query_embedding,
-            "match_count": n,
-        }
-        if self.config.source_prefixes is not None:
-            body["source_filter"] = self.config.source_prefixes
-        # Optional: RPC can filter on document metadata (e.g. `timestamp` between bounds).
-        if metadata_time_start is not None:
-            body["metadata_time_start"] = metadata_time_start
-        if metadata_time_end is not None:
-            body["metadata_time_end"] = metadata_time_end
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                self._rpc_url(),
-                headers=self._rest_headers(),
-                json=body,
-            )
-        r.raise_for_status()
-        data = r.json()
-        if not data:
+        _ = (metadata_time_start, metadata_time_end)
+        if not query_embedding:
             return []
-        if isinstance(data, list):
-            return [dict(x) for x in data]
-        if isinstance(data, dict):
-            return [dict(data)]
-        return []
+        n = match_count or self.config.default_match_count
+        n = max(1, min(int(n), self.config.max_match_count))
+        use_prefixes = self.config.source_prefixes is not None
+        params: dict[str, Any] = {
+            "emb": self._vector_literal(query_embedding),
+            "n": n,
+        }
+        if use_prefixes:
+            params["prefixes"] = list(self.config.source_prefixes or [])
+        async with self.session_factory() as session:
+            res = await session.execute(self._vector_query(use_prefixes), params)
+            rows = res.mappings().all()
+        return [self._normalize_row(dict(r)) for r in rows]
 
     async def retrieve_hybrid(
         self,
@@ -248,45 +235,43 @@ class SupabaseRagRetriever:
         metadata_time_start: str | None = None,
         metadata_time_end: str | None = None,
     ) -> list[dict[str, Any]]:
+        _ = (metadata_time_start, metadata_time_end)
         n = match_count or self.config.default_match_count
-        
+        n = max(1, min(int(n), self.config.max_match_count))
+
         vector_results = await self.retrieve(
             query_embedding=query_embedding,
             match_count=n,
-            metadata_time_start=metadata_time_start,
-            metadata_time_end=metadata_time_end,
         )
-        
-        fts_body: dict[str, Any] = {
-            "fts_query": query,
-            "match_count": n,
-        }
-        if self.config.source_prefixes is not None:
-            fts_body["source_filter"] = self.config.source_prefixes
-            
-        fts_results = []
+
+        fts_results: list[dict[str, Any]] = []
         try:
-            base = self.config.supabase_url.rstrip("/")
-            fts_url = f"{base}/rest/v1/rpc/{self.config.fts_rpc}"
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                r = await client.post(
-                    fts_url,
-                    headers=self._rest_headers(),
-                    json=fts_body,
+            from sqlalchemy import text as sa_text
+
+            async with self.session_factory() as session:
+                res = await session.execute(
+                    sa_text(
+                        "SELECT id::text AS id, source, content, chunk_metadata "
+                        "FROM match_rag_chunks_fts("
+                        "CAST(:q AS text), :n, CAST(:prefixes AS text[]))"
+                    ),
+                    {
+                        "q": query,
+                        "n": n,
+                        "prefixes": list(self.config.source_prefixes or [])
+                        or None,
+                    },
                 )
-            r.raise_for_status()
-            data = r.json()
-            if data:
-                if isinstance(data, list):
-                    fts_results = [dict(x) for x in data]
-                elif isinstance(data, dict):
-                    fts_results = [dict(data)]
-        except Exception as exc:
+                fts_results = [
+                    self._normalize_row(dict(r)) for r in res.mappings().all()
+                ]
+        except Exception as exc:  # noqa: BLE001
             import logging
+
             logging.getLogger(__name__).warning("FTS search failed: %s", exc)
             return vector_results
-            
-        return merge_rrf(vector_results, fts_results, k=self.config.rrf_k)
+
+        return merge_rrf(vector_results, fts_results, k=60)
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +427,7 @@ async def run_hybrid_synthesis(
 class RAGPipelineConfig:
     """Ties retriever, optional embedder, and LLM for end-to-end runs."""
 
-    retriever: SupabaseRagRetriever
+    retriever: PostgresRagRetriever
     synthesis_llm: BaseChatModel
     embed_query: Callable[[str], Awaitable[list[float]]] | None = None
     pii_guard: SynthesisPiiGuard | None = None
@@ -456,7 +441,7 @@ async def run_rag_hybrid(
     sql_result_rows: list[dict[str, Any]] | None,
 ) -> HybridSynthesisResult:
     """
-    Full path: (optional) precomputed **query_embedding** → Supabase match RPC →
+    Full path: (optional) precomputed **query_embedding** → Postgres vector search →
     :func:`run_hybrid_synthesis`. If ``query_embedding`` is **None** and
     ``config.embed_query`` is set, it is derived from **user_query**.
     """
@@ -489,7 +474,7 @@ class HybridSynthesisNodeConfig:
     # If state includes query_embedding, embedder is optional
     embed_query: Callable[[str], Awaitable[list[float]]] | None = None
     # When retriever is None, the node only synthesizes (caller must set retrieved_chunks)
-    retriever: SupabaseRagRetriever | None = None
+    retriever: PostgresRagRetriever | None = None
     pii_guard: SynthesisPiiGuard | None = None
 
 

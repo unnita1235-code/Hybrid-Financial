@@ -2,9 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { ArrowLeft, FileDown, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Database,
+  FileDown,
+  FileText,
+  ListChecks,
+  Loader2,
+  Newspaper,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
 import { type MemoReportResponse, generateMemo } from "@/lib/memo-reports";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const METRIC_PRESETS = [
   "Q3 Revenue Leakage",
@@ -24,6 +36,26 @@ function defaultDateRange() {
   const m = Math.floor(start.getMonth() / 3) * 3;
   start.setMonth(m, 1);
   return { start: toIso(start), end: toIso(end) };
+}
+
+function safeText(value: unknown): string {
+  if (value == null) return "—";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function nonEmptyStrings(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((v) => (typeof v === "string" ? v.trim() : safeText(v).trim()))
+    .filter((s) => s.length > 0 && s !== "—");
 }
 
 export default function ReportsPage() {
@@ -80,149 +112,320 @@ export default function ReportsPage() {
     URL.revokeObjectURL(u);
   }, [result]);
 
+  const headlines = result ? nonEmptyStrings(result.news_headlines) : [];
+  const counterArguments = result
+    ? nonEmptyStrings(result.counter_arguments)
+    : [];
+  const riskFactors = result ? nonEmptyStrings(result.risk_factors) : [];
+  const hasDraft =
+    result != null &&
+    typeof result.draft === "string" &&
+    result.draft.trim().length > 0;
+  const hasSqlContext =
+    result != null &&
+    typeof result.sql_context === "string" &&
+    result.sql_context.trim().length > 0;
+  const hasSqlSummary =
+    result != null &&
+    typeof result.sql_summary === "string" &&
+    result.sql_summary.trim().length > 0;
+  const hasRagHint =
+    result != null &&
+    typeof result.rag_narrative_hint === "string" &&
+    result.rag_narrative_hint.trim().length > 0;
+  const hasModelSynthesis =
+    result != null &&
+    typeof result.model_synthesis === "string" &&
+    result.model_synthesis.trim().length > 0;
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-slate-100">
-      <div className="border-b border-white/10 glass-terminal">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
-          <div className="inline-flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 transition hover:text-slate-200"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-              Dashboard
-            </Link>
-            <Link
-              href="/debate"
-              className="font-mono text-xs text-slate-500 transition hover:text-slate-300"
-            >
-              Debate
-            </Link>
-          </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
-            Reports
-          </span>
+    <div className="mx-auto w-full max-w-3xl overflow-x-clip px-4 py-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            Dashboard
+          </Link>
+          <Link
+            href="/debate"
+            className="font-mono text-xs text-muted-foreground transition hover:text-foreground"
+          >
+            Debate
+          </Link>
         </div>
+        <Badge variant="default">Reports</Badge>
       </div>
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-        <header>
-          <h1 className="font-mono text-lg font-medium tracking-tight text-slate-100">
-            Hybrid memo
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-slate-500">
-            SQL window + RAG narrative, then a critic pass against live market
-            headlines. Export a minimal PDF for distribution.
-          </p>
-        </header>
+      <div className="mb-4">
+        <h1 className="font-sans text-lg font-semibold tracking-tight text-foreground">
+          Reports
+        </h1>
+        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+          Configure a date range and metric focus, generate a hybrid SQL + RAG
+          analyst memo, inspect the returned content, and export the existing
+          PDF.
+        </p>
+      </div>
 
-        <div className="glass-terminal space-y-4 rounded-lg border border-white/10 p-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                Start
-              </span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded border border-white/10 bg-slate-900/50 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-slate-500/40"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                End
-              </span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded border border-white/10 bg-slate-900/50 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-slate-500/40"
-              />
-            </label>
-          </div>
-
-          <label className="block space-y-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
-              Metric focus
-            </span>
-            <select
-              value={metric}
-              onChange={(e) => setMetric(e.target.value)}
-              className="w-full rounded border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500/40"
+      <Card className="space-y-4 p-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="reports-start"
+              className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
             >
-              {METRIC_PRESETS.map((m) => (
-                <option key={m} value={m} className="bg-zinc-900">
-                  {m}
-                </option>
-              ))}
-            </select>
+              Start
+            </label>
             <input
-              type="text"
-              value={customMetric}
-              onChange={(e) => setCustomMetric(e.target.value)}
-              placeholder="Override with custom focus (optional)"
-              className="mt-1 w-full rounded border border-dashed border-white/15 bg-transparent px-3 py-2 font-mono text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-slate-500/40"
+              id="reports-start"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
             />
-          </label>
-
-          {err && <p className="font-mono text-xs text-rose-300/90">{err}</p>}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void onGenerate()}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white px-4 py-2.5 text-xs font-medium text-black transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+          </div>
+          <div className="space-y-1.5">
+            <label
+              htmlFor="reports-end"
+              className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
             >
-              <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-              {busy ? "Drafting…" : "Generate memo"}
-            </button>
-            {result && (
-              <button
-                type="button"
-                onClick={() => void onDownloadPdf()}
-                className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-slate-900/50 px-4 py-2.5 text-xs font-medium text-slate-100 transition hover:border-white/20"
-              >
-                <FileDown className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Download PDF
-              </button>
-            )}
+              End
+            </label>
+            <input
+              id="reports-end"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
+            />
           </div>
         </div>
 
-        {result && (
-          <div
-            className={cn(
-              "glass-terminal space-y-3 rounded-lg border border-white/10 p-4",
-            )}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="reports-metric"
+            className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
           >
-            <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-slate-500">
-              Output <span className="text-slate-600">·</span>{" "}
-              <span
-                className={cn(
-                  result.used_llm ? "text-emerald-500/80" : "text-amber-500/80",
-                )}
-              >
-                LLM {result.used_llm ? "on" : "off"}
-              </span>
-              <span className="text-slate-600"> · </span>
-              <span
-                className={cn(
-                  result.used_news_api ? "text-emerald-500/80" : "text-amber-500/80",
-                )}
-              >
-                News {result.used_news_api ? "API" : "stub"}
-              </span>
-            </p>
-            <div className="max-h-[min(70vh,36rem)] overflow-y-auto rounded border border-white/5 bg-slate-950/40 p-3">
-              <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-300">
-                {result.final_memo}
-              </pre>
+            Metric focus
+          </label>
+          <select
+            id="reports-metric"
+            value={metric}
+            onChange={(e) => setMetric(e.target.value)}
+            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
+          >
+            {METRIC_PRESETS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={customMetric}
+            onChange={(e) => setCustomMetric(e.target.value)}
+            placeholder="Override with custom focus (optional)"
+            aria-label="Custom metric focus"
+            className="mt-1 w-full rounded-md border border-dashed border-input bg-transparent px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/20"
+          />
+        </div>
+
+        {err && (
+          <p className="text-xs text-destructive" role="alert">
+            {err}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => void onGenerate()}
+            disabled={busy}
+            className="min-h-[44px]"
+          >
+            {busy ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+                aria-hidden
+              />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            )}
+            {busy ? "Drafting…" : "Generate memo"}
+          </Button>
+          {result && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void onDownloadPdf()}
+              className="min-h-[44px]"
+            >
+              <FileDown className="h-3.5 w-3.5" aria-hidden />
+              Download PDF
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {!result && !busy && !err && (
+        <Card className="mt-4 p-4">
+          <div className="flex items-start gap-3">
+            <FileText
+              className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                No memo yet
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Choose a date range and metric focus, then generate a memo. The
+                returned content and its supporting sections will appear here.
+              </p>
             </div>
           </div>
-        )}
-      </main>
+        </Card>
+      )}
+
+      {result && (
+        <div className="mt-4 space-y-4">
+          <Card className="p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Final memo
+              </h2>
+              <Badge variant={result.used_llm ? "verified" : "default"}>
+                LLM {result.used_llm ? "on" : "off"}
+              </Badge>
+              <Badge variant={result.used_news_api ? "verified" : "default"}>
+                News {result.used_news_api ? "live" : "stub"}
+              </Badge>
+            </div>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">
+              {result.metric_focus} · {result.start_date} → {result.end_date}
+            </p>
+            <div className="mt-2 max-h-[min(70vh,36rem)] overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
+                {result.final_memo}
+              </p>
+            </div>
+          </Card>
+
+          {hasDraft && (
+            <Card className="p-4">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Draft
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The pre-final draft returned alongside the memo above.
+              </p>
+              <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                  {result.draft}
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {(hasSqlContext || hasSqlSummary) && (
+            <Card className="p-4">
+              <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <Database className="h-3.5 w-3.5" aria-hidden />
+                SQL evidence
+              </h2>
+              {hasSqlSummary && (
+                <p className="mt-2 break-words text-sm leading-6 text-foreground">
+                  {result.sql_summary}
+                </p>
+              )}
+              {hasSqlContext && (
+                <details className="mt-2 rounded-md border border-border bg-muted/30">
+                  <summary className="cursor-pointer px-3 py-2 font-mono text-xs text-muted-foreground transition hover:text-foreground">
+                    SQL context
+                  </summary>
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-words border-t border-border p-3 font-mono text-[11px] leading-relaxed text-foreground">
+                    {result.sql_context}
+                  </pre>
+                </details>
+              )}
+            </Card>
+          )}
+
+          {hasRagHint && (
+            <Card className="p-4">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                RAG narrative hint
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Supporting retrieval context — not the final answer.
+              </p>
+              <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
+                {result.rag_narrative_hint}
+              </p>
+            </Card>
+          )}
+
+          {headlines.length > 0 && (
+            <Card className="p-4">
+              <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <Newspaper className="h-3.5 w-3.5" aria-hidden />
+                News headlines
+              </h2>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground">
+                {headlines.map((h, i) => (
+                  <li key={`${i}-${h.slice(0, 32)}`} className="break-words">
+                    {h}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {counterArguments.length > 0 && (
+            <Card className="p-4">
+              <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                Counterarguments
+              </h2>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground">
+                {counterArguments.map((c, i) => (
+                  <li key={`${i}-${c.slice(0, 32)}`} className="break-words">
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {riskFactors.length > 0 && (
+            <Card className="p-4">
+              <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <TriangleAlert
+                  className="h-3.5 w-3.5 text-warning"
+                  aria-hidden
+                />
+                Risk factors
+              </h2>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-foreground">
+                {riskFactors.map((r, i) => (
+                  <li key={`${i}-${r.slice(0, 32)}`} className="break-words">
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {hasModelSynthesis && (
+            <p className="break-words px-1 font-mono text-[11px] leading-5 text-muted-foreground">
+              Model synthesis: {result.model_synthesis}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

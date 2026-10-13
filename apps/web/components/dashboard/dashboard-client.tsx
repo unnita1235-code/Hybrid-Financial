@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { CommandBar, type CommandRunOptions } from "@/components/dashboard/command-bar";
 import {
   AgentTerminal,
@@ -24,6 +25,9 @@ import {
   readInsightSse,
 } from "@/lib/insight-stream";
 import { getBackendWsUrl } from "@/lib/aequitas-api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function DashboardClient() {
@@ -43,8 +47,18 @@ export function DashboardClient() {
     rationale: string;
   } | null>(null);
   const [terminalLines, setTerminalLines] = useState<AgentTerminalLine[]>([]);
+  const [railOpen, setRailOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!railOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setRailOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [railOpen]);
 
   const simChrome = dataSource === "simulation" && !!sqlPayload;
 
@@ -320,35 +334,133 @@ export function DashboardClient() {
     [auditId],
   );
 
+  const isError = /\[Error\]|Error:/.test(narrative);
+  const status: "Ready" | "Running" | "Streaming" | "Partial" | "Completed" | "No results" | "Error" =
+    !query
+      ? "Ready"
+      : isError
+        ? "Error"
+        : busy && !sqlPayload && !narrative
+          ? "Running"
+          : narrativeStreaming || (busy && (!!sqlPayload || !!narrative))
+            ? "Streaming"
+            : sqlPayload && narrative
+              ? "Completed"
+              : sqlPayload
+                ? "Partial"
+                : !busy
+                  ? "No results"
+                  : "Ready";
+  const statusVariant =
+    status === "Completed"
+      ? "verified"
+      : status === "Running" || status === "Streaming" || status === "Partial"
+        ? "primary"
+        : status === "Error"
+          ? "failed"
+          : status === "No results"
+            ? "throttled"
+            : "default";
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-x-clip bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
-        <SavedReportsSidebar onSelect={onSaved} />
+        <div className="hidden shrink-0 lg:flex lg:w-[280px]">
+          <SavedReportsSidebar onSelect={onSaved} className="w-[280px]" />
+        </div>
+        {railOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+              aria-hidden
+              onClick={() => setRailOpen(false)}
+            />
+            <div
+              className="fixed left-0 top-0 z-50 flex h-full w-full max-w-[320px] flex-col border-r border-border bg-card lg:hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Saved queries"
+            >
+              <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  Saved queries
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setRailOpen(false)}
+                  aria-label="Close saved queries"
+                  className="px-2.5"
+                >
+                  <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+                </Button>
+              </div>
+              <SavedReportsSidebar
+                onSelect={(id) => {
+                  onSaved(id);
+                  setRailOpen(false);
+                }}
+                className="w-full flex-1 border-r-0"
+              />
+            </div>
+          </>
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b border-border/30 bg-card px-4 py-2 lg:hidden">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setRailOpen(true)}
+              aria-label="Open saved queries"
+              aria-expanded={railOpen}
+              className="px-2.5"
+            >
+              <Menu className="h-4 w-4" strokeWidth={2} aria-hidden />
+              Queries
+            </Button>
+            <Badge variant={statusVariant} aria-live="polite">
+              {status}
+            </Badge>
+            {simChrome && (
+              <Badge variant="throttled">Simulation</Badge>
+            )}
+          </div>
           <CommandBar onRun={runStream} isBusy={busy} />
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-clip p-4">
+            <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4 hidden items-center gap-2 lg:flex" aria-live="polite">
+              <Badge variant={statusVariant}>{status}</Badge>
+              {simChrome ? (
+                <Badge variant="throttled">Simulation — rolled back</Badge>
+              ) : null}
+              {narrativeStreaming ? (
+                <span className="text-xs text-muted-foreground">Streaming response…</span>
+              ) : null}
+            </div>
             {query && (
               <div className="mb-4 space-y-1.5 font-sans text-xs text-muted-foreground">
-                <p>
+                <p className="break-words">
                   <span className="text-muted-foreground/60">Q</span> {query}
                 </p>
                 {lastWhatIf && (
-                  <p className="text-warning/80">
+                  <p className="break-words text-warning/80">
                     <span className="text-warning/60">What-if</span> {lastWhatIf}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Phase 1: SQL + chart — appears first when `sql` event lands */}
+            {/* SQL + chart — appears first when `sql` event lands */}
             <div
               className={cn(
                 "grid gap-4",
-                "lg:grid-cols-2",
-                !sqlPayload && "opacity-40",
+                "md:grid-cols-2",
+                !sqlPayload && "opacity-60",
               )}
             >
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 {sqlPayload ? (
                   <MetricCard
                     label={sqlPayload.label}
@@ -362,56 +474,59 @@ export function DashboardClient() {
                     onOpenContext={() => setPanelOpen(true)}
                     className={
                       simChrome
-                        ? "border-2 border-dashed border-amber-400/70"
+                        ? "border-2 border-dashed border-warning/50"
                         : undefined
                     }
                   />
                 ) : (
-                  <div className="glass-terminal rounded-md border border-dashed border-white/10 p-4 text-sm text-slate-600">
-                    SQL metric appears here as soon as the first stream event returns.
-                  </div>
+                  <Card className="border-dashed p-4">
+                    <p className="text-sm font-medium text-foreground">Ready — ask a question to begin</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      SQL metric appears here as soon as the first stream event returns. No mock figures are shown.
+                    </p>
+                  </Card>
                 )}
                 {sqlPayload && (
-                  <div
+                  <Card
                     className={cn(
-                      "glass-terminal rounded-md p-3",
-                      simChrome && "border-2 border-dashed border-amber-400/70",
+                      "p-3",
+                      simChrome && "border-2 border-dashed border-warning/50",
                     )}
                   >
-                    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                       {simChrome ? "Read query (synthetic state)" : "SQL (read-only)"}
                     </p>
-                    <pre className="mt-2 max-h-28 overflow-auto font-mono text-[10px] leading-tight text-slate-500">
+                    <pre className="mt-2 max-h-28 overflow-auto font-mono text-[10px] leading-tight text-muted-foreground">
                       {sqlPayload.sql}
                     </pre>
                     {simulationMeta && (
-                      <div className="mt-2 border-t border-amber-500/20 pt-2">
-                        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-amber-500/70">
+                      <div className="mt-2 border-t border-warning/20 pt-2">
+                        <p className="font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-warning">
                           Rollback UPDATE
                         </p>
-                        <pre className="mt-1 max-h-20 overflow-auto font-mono text-[10px] leading-tight text-amber-200/50">
+                        <pre className="mt-1 max-h-20 overflow-auto font-mono text-[10px] leading-tight text-warning/80">
                           {simulationMeta.updateSql}
                         </pre>
                       </div>
                     )}
-                    <p className="mt-2 text-[10px] text-slate-600">
+                    <p className="mt-2 text-[10px] text-muted-foreground">
                       Rows: {sqlPayload.rows.length} · narrative + sparkline in the side
                       panel
                     </p>
-                  </div>
+                  </Card>
                 )}
               </div>
               {sqlPayload ? (
-                <div
+                <Card
                   className={cn(
-                    "glass-terminal flex min-h-[120px] flex-col justify-end gap-3 p-4",
+                    "flex min-h-[120px] min-w-0 flex-col justify-end gap-3 p-4",
                     simChrome && "border-2 border-dashed border-warning/50",
                   )}
                 >
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  <p className="font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground">
                     Series spark
                   </p>
-                  <div className="flex min-h-0 items-end">
+                  <div className="flex min-h-0 min-w-0 items-end">
                     <InlineSparkline
                       data={sqlPayload.chart}
                       width={280}
@@ -421,21 +536,34 @@ export function DashboardClient() {
                       }
                     />
                   </div>
-                </div>
+                </Card>
               ) : (
-                <div className="min-h-[120px] rounded-lg border border-dashed border-border/30 p-4 text-xs text-muted-foreground">
-                  Minimap spark (no grid) appears when SQL loads.
-                </div>
+                <Card className="min-h-[120px] border-dashed p-4">
+                  <p className="text-sm font-medium text-foreground">No series yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Minimap spark (no grid) appears when SQL loads.
+                  </p>
+                </Card>
               )}
             </div>
+            {isError && (
+              <Card className="mt-4 border-destructive/40 p-4" role="alert">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="failed">Error</Badge>
+                  <p className="text-xs text-muted-foreground">
+                    Query preserved — review the message in the evidence panel, then press Run to retry.
+                  </p>
+                </div>
+              </Card>
+            )}
             {sqlPayload && (
-              <div
+              <Card
                 className={cn(
-                  "glass-terminal mt-4 overflow-hidden rounded-lg",
+                  "mt-4 min-w-0 overflow-hidden",
                   simChrome && "border-2 border-dashed border-warning/50",
                 )}
               >
-                <p className="border-b border-border/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <p className="border-b border-border/30 px-4 py-2 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
                   Result rows
                 </p>
                 <div className="overflow-x-auto p-3">
@@ -446,7 +574,7 @@ export function DashboardClient() {
                           {Object.entries(row).map(([k, cell]) => (
                             <td key={k} className="px-3 py-2 align-top">
                               <span className="font-sans text-muted-foreground/60">{k}</span>{" "}
-                              <span className="font-numeric text-foreground font-medium">
+                              <span className="font-numeric font-medium tabular-nums text-foreground">
                                 {String(cell)}
                               </span>
                             </td>
@@ -456,16 +584,35 @@ export function DashboardClient() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Card>
+            )}
+            {!query && !sqlPayload && (
+              <Card className="mt-4 border-dashed p-4">
+                <p className="text-sm font-medium text-foreground">Empty state — no run yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use Hybrid insight for SQL + RAG synthesis, Compare for two-period deltas, or open saved example presets. Evidence, SQL, and provenance appear here and in the right panel.
+                </p>
+              </Card>
+            )}
+            {query && !busy && !sqlPayload && !isError && (
+              <Card className="mt-4 border-dashed p-4" role="status">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="throttled">No results</Badge>
+                  <p className="text-xs text-muted-foreground">
+                    Last run ended without SQL rows — query preserved. Adjust the question and press Run.
+                  </p>
+                </div>
+              </Card>
             )}
 
             {/* Inline hint: narrative is panel-first */}
-            {sqlPayload && !narrative && !narrativeStreaming && !busy && (
+            {sqlPayload && !narrative && !narrativeStreaming && !busy && !isError && (
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 Open the panel from the metric card, or it opens automatically when the
                 run completes.
               </p>
             )}
+            </div>
           </div>
         </div>
       </div>
@@ -475,7 +622,7 @@ export function DashboardClient() {
       <ContextPanel
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
-        title="Narrative context (RAG)"
+        title="Evidence & provenance"
         narrative={narrative}
         isStreaming={narrativeStreaming}
         transparency={transparency}
@@ -493,7 +640,7 @@ export function DashboardClient() {
                     ? (transparency?.ragChunks ?? []).map(
                         (c) => c.content_preview || c.source,
                       )
-                    : ["RAG chunks appear here when Supabase vector is configured."],
+                    : ["RAG chunks appear here once retrieval returns passages."],
               }
             : undefined
         }

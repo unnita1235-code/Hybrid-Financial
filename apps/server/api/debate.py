@@ -4,10 +4,7 @@ import asyncio
 import json
 from typing import Any
 
-from aequitas_ai import (
-    SupabaseRagConfig,
-    SupabaseRagRetriever,
-)
+from aequitas_ai import PostgresRagRetriever
 from fastapi import APIRouter, HTTPException, Request
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
@@ -109,20 +106,18 @@ def _format_rag(raw_chunks: list[dict[str, Any]]) -> list[RagSource]:
 
 
 async def _retrieve_rag(metric: str) -> tuple[list[RagSource], bool, str | None]:
-    if not settings.supabase_url or not settings.supabase_service_key:
-        return [], False, "RAG disabled: SUPABASE_URL or SUPABASE_SERVICE_KEY missing."
+    from app.db import get_session_maker
+
     emb = OpenAIEmbeddings(
         model=settings.embedding_model,
         api_key=settings.openai_api_key,
     )
     query_embedding = await emb.aembed_query(metric)
-    retriever = SupabaseRagRetriever(
-        config=SupabaseRagConfig(
-            supabase_url=settings.supabase_url,
-            supabase_key=settings.supabase_service_key,
-        )
-    )
-    raw = await retriever.retrieve(query_embedding, match_count=_max_rag_chunks)
+    retriever = PostgresRagRetriever(session_factory=get_session_maker())
+    try:
+        raw = await retriever.retrieve(query_embedding, match_count=_max_rag_chunks)
+    except Exception as e:  # noqa: BLE001
+        return [], False, f"RAG retrieval failed: {e}"
     sources = _format_rag(raw)
     return sources, bool(sources), None
 

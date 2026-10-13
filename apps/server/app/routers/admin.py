@@ -14,7 +14,6 @@ from api.ingest import (
     _embed_texts,
     _session_factory,
     _upsert_postgres,
-    _upsert_supabase_rest,
     parse_pdf_bytes,
 )
 from app.auth import require_role
@@ -122,7 +121,6 @@ async def _ingest_stream(file: UploadFile, source_label: str) -> AsyncIterator[s
         async with sf() as session:
             async with session.begin():
                 written = await _upsert_postgres(session, items)
-        await _upsert_supabase_rest(items)
 
         yield _sse(
             {

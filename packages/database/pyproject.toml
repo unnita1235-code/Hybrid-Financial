@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "aequitas-database"
 version = "0.1.0"
-description = "SQLAlchemy models, Alembic migrations, Supabase/Postgres + pgvector"
+description = "SQLAlchemy models, Alembic migrations, Postgres + pgvector"
 requires-python = ">=3.11"
 dependencies = [
   "sqlalchemy>=2.0.36",
